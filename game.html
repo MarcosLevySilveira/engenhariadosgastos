@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestão de Metas Financeiras</title>
+<style>
+body { font-family: 'Segoe UI', sans-serif; background: #f4f6f8; color: #333; margin: 0; padding: 0; }
+nav { background-color: #333; display: flex; gap: 20px; padding: 12px; justify-content: center; }
+nav a { color: white; text-decoration: none; font-weight: 500; }
+nav a:hover { color: #FFD700; }
+.container { max-width: 900px; margin: 30px auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+h1 { text-align: center; color: #333; }
+.status-bar { background: #fff; padding: 15px; border-radius: 10px; margin-bottom: 25px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+.status-progress { background: #eee; border-radius: 25px; overflow: hidden; height: 25px; margin-top: 5px; }
+.status-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #4CAF50, #8BC34A); text-align: center; color: white; font-weight: bold; transition: width 0.5s; line-height: 25px; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
+.card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.3s, background 0.3s; position: relative; }
+.card:hover { transform: scale(1.02); }
+.progress-bar { background: #ddd; border-radius: 25px; overflow: hidden; height: 20px; margin-top: 10px; }
+.progress { height: 100%; width: 0%; text-align: center; color: white; font-size: 12px; font-weight: bold; line-height: 20px; transition: width 0.4s; }
+.badge { display: inline-block; background: gold; color: #333; padding: 5px 8px; border-radius: 8px; margin: 3px; font-size: 12px; }
+.modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; }
+.modal-content { background: white; padding: 20px; border-radius: 10px; width: 350px; position: relative; }
+input, button { padding: 8px; margin: 5px 0; width: 100%; border-radius: 8px; border: 1px solid #ccc; }
+button { background: #2196F3; color: white; border: none; cursor: pointer; transition: background 0.3s; }
+button:hover { background: #1976D2; }
+.contribution-item { display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin-bottom: 4px; }
+.remove-btn { background: transparent; border: none; color: red; cursor: pointer; font-size: 14px; margin-left: 5px; }
+.confetti { position: absolute; width: 10px; height: 10px; border-radius: 50%; animation: fall 1s linear forwards; }
+@keyframes fall { to {transform: translateY(200px) rotate(360deg); opacity:0;} }
+</style>
+</head>
+<body>
+<nav>
+    <a href="index.html">Tabela de Gastos</a>
+        <a href="cadastro.html">Cadastrar Despesa/Entrada</a>
+        <a href="debts.html">Dívidas</a>
+        <a href="monthlyExpenses.html">Gastos Mensais</a>
+        <a href="dre.html">Despesas e receitas</a>
+        <a href="burnporsemana.html">Burn por semana</a>
+        <a href="exportpdf.html">Exportar PDF</a>
+        <a href="game.html">InvestGame</a>
+        <a href="portfolio.html">Portfolio</a>
+    </nav>
+
+<div class="container">
+<h1>🎯 Metas de Compras</h1>
+
+<div class="status-bar">
+  <div><strong>Nível:</strong> <span id="levelName">Bronze</span></div>
+  <div class="status-progress"><div class="status-fill" id="statusFill">0%</div></div>
+  <div id="pointsDisplay">Pontos: 0</div>
+
+  <div style="margin-top:15px;">
+    <div><strong>Progresso Geral das Metas</strong></div>
+    <div style="background:#ddd; border-radius:25px; overflow:hidden; height:25px; margin-top:5px;">
+      <div id="overallProgressBar" style="height:100%; width:0%; background:#2196F3; text-align:center; color:white; font-weight:bold; line-height:25px; transition:width 0.5s;">0%</div>
+    </div>
+    <div id="overallProgressText" style="margin-top:5px; font-size:14px; color:#333;"></div>
+  </div>
+</div>
+
+<input type="text" id="itemName" placeholder="Nome do item">
+<input type="number" id="itemValue" placeholder="Valor da meta">
+<button onclick="addGoal()">Adicionar Meta</button>
+
+<div class="card-grid" id="goalContainer"></div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <h3 id="modalTitle"></h3>
+    <p>Total aportado: R$<span id="savedValue">0.00</span></p>
+    <input type="number" id="addAmount" placeholder="Valor do aporte (+) ou retirada (-)">
+    <button onclick="addContribution()">Registrar</button>
+    <p><strong>Data dos aportes:</strong></p>
+    <ul id="contributionList"></ul>
+    <div id="badgeList"></div>
+    <button onclick="deleteGoal()">🗑️ Deletar Meta</button>
+    <button onclick="closeModal()">Fechar</button>
+  </div>
+</div>
+
+<script>
+let goals = JSON.parse(localStorage.getItem('goals')) || [];
+let selectedGoal = null;
+
+function saveGoals() { localStorage.setItem('goals', JSON.stringify(goals)); updateStatusBar(); }
+
+function addGoal() {
+  const name = document.getElementById('itemName').value.trim();
+  const value = parseFloat(document.getElementById('itemValue').value);
+  if(!name || !value || value <= 0) return alert('Preencha corretamente.');
+  goals.push({ name, goalValue: value, totalSaved: 0, contributions: [], badges: [], points: 0 });
+  saveGoals(); renderGoals();
+  document.getElementById('itemName').value=''; document.getElementById('itemValue').value='';
+}
+
+function renderGoals() {
+  const container = document.getElementById('goalContainer');
+  container.innerHTML='';
+  goals.forEach((g,i)=>{
+    const percent = (g.totalSaved/g.goalValue)*100;
+    const color = percent<=25 ? '#e53935' : percent<=50 ? '#FB8C00' : percent<=75 ? '#FDD835' : '#43A047';
+    const card = document.createElement('div');
+    card.className='card';
+    card.style.background=color+'20';
+    card.innerHTML=`
+      <h3>${g.name}</h3>
+      <p>Meta: R$${g.goalValue.toFixed(2)}</p>
+      <div class="progress-bar"><div class="progress" style="width:${percent}%; background:${color};">${percent.toFixed(1)}%</div></div>
+      <p><strong>Aportado:</strong> R$${g.totalSaved.toFixed(2)}</p>`;
+    card.onclick=()=>openModal(i);
+    container.appendChild(card);
+  });
+  updateStatusBar();
+}
+
+function openModal(index){
+  selectedGoal=index;
+  const g=goals[index];
+  document.getElementById('modalTitle').textContent=g.name;
+  document.getElementById('savedValue').textContent=g.totalSaved.toFixed(2);
+  renderContributionList();
+  document.getElementById('badgeList').innerHTML=g.badges.map(b=>`<span class="badge">${b}</span>`).join('');
+  document.getElementById('modal').style.display='flex';
+}
+
+function closeModal(){ document.getElementById('modal').style.display='none'; selectedGoal=null; }
+
+function renderContributionList(){
+  const g=goals[selectedGoal];
+  const list=document.getElementById('contributionList'); list.innerHTML='';
+  g.contributions.forEach((c,idx)=>{
+    const li=document.createElement('li');
+    li.className='contribution-item';
+    li.innerHTML=`${c.date}: R$${c.amount.toFixed(2)}<button class="remove-btn" onclick="removeContribution(${idx})">❌</button>`;
+    list.appendChild(li);
+  });
+}
+
+function addContribution(){
+  const amount=parseFloat(document.getElementById('addAmount').value);
+  if(!amount) return alert('Informe um valor.');
+  const g=goals[selectedGoal];
+  const restante=g.goalValue-g.totalSaved;
+  if(amount>restante) return alert(`Você só precisa de R$${restante.toFixed(2)} para completar esta meta.`);
+  g.totalSaved+=amount;
+  g.contributions.push({amount,date:new Date().toLocaleDateString('pt-BR')});
+  updateBadges();
+  saveGoals(); renderGoals(); openModal(selectedGoal);
+  document.getElementById('addAmount').value='';
+}
+
+function removeContribution(idx){
+  const g=goals[selectedGoal];
+  if(confirm(`Remover aporte de R$${g.contributions[idx].amount.toFixed(2)}?`)){
+    g.totalSaved-=g.contributions[idx].amount;
+    if(g.totalSaved<0) g.totalSaved=0;
+    g.contributions.splice(idx,1);
+    updateBadges();
+    saveGoals(); renderGoals(); renderContributionList();
+    document.getElementById('savedValue').textContent=g.totalSaved.toFixed(2);
+  }
+}
+
+function updateBadges(){
+  const g=goals[selectedGoal];
+  const percent=(g.totalSaved/g.goalValue)*100;
+  const milestones=[{value:25,label:'🥉 25%'},{value:50,label:'🥈 50%'},{value:75,label:'🥇 75%'},{value:100,label:'🏆 Meta!'}];
+  g.badges=[];
+  g.points=0;
+  milestones.forEach(m=>{
+    if(percent>=m.value){ g.badges.push(m.label); g.points+=m.value/10; }
+  });
+  if(percent>=100) showConfetti();
+}
+
+function deleteGoal(){
+  if(selectedGoal===null) return;
+  if(confirm("Tem certeza que deseja excluir esta meta?")){
+    goals.splice(selectedGoal,1);
+    saveGoals(); renderGoals(); closeModal();
+  }
+}
+
+function updateStatusBar(){
+  const totalPoints=goals.reduce((sum,g)=>sum+g.points,0);
+  const totalMeta=goals.reduce((sum,g)=>sum+g.goalValue,0);
+  const totalAportado=goals.reduce((sum,g)=>sum+g.totalSaved,0);
+  const progress=totalPoints/100;
+  const fill=document.getElementById('statusFill');
+  fill.style.width=Math.min(progress*100,100)+'%';
+  fill.textContent=Math.round(progress*100)+'%';
+  document.getElementById('pointsDisplay').textContent=`Pontos: ${totalPoints.toFixed(1)}`;
+  document.getElementById('levelName').textContent=
+    totalPoints<50?'Bronze':
+    totalPoints<100?'Prata':
+    totalPoints<200?'Ouro':'Platina';
+
+  const progressoGeral = totalMeta>0 ? (totalAportado/totalMeta)*100 : 0;
+  const barGeral = document.getElementById('overallProgressBar');
+  const textoGeral = document.getElementById('overallProgressText');
+  barGeral.style.width=progressoGeral.toFixed(1)+'%';
+  barGeral.textContent=progressoGeral.toFixed(1)+'%';
+  textoGeral.textContent=`Aportado R$${totalAportado.toFixed(2)} de R$${totalMeta.toFixed(2)} (${progressoGeral.toFixed(1)}%)`;
+}
+
+function showConfetti(){
+  const container=document.getElementById('modal');
+  for(let i=0;i<30;i++){
+    const conf=document.createElement('div'); conf.className='confetti';
+    conf.style.left=Math.random()*container.offsetWidth+'px';
+    conf.style.background=['gold','red','blue','green'][Math.floor(Math.random()*4)];
+    container.appendChild(conf);
+    setTimeout(()=>container.removeChild(conf),1000);
+  }
+  const audio=new Audio('https://www.myinstants.com/media/sounds/tada.mp3'); audio.play();
+}
+
+renderGoals();
+</script>
+</body>
+</html>

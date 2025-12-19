@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Despesas/Entradas</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <script>
+        function getPeriodoDoDia(horario) {
+            if (!horario) return "-";
+            const hora = parseInt(horario.split(":")[0]);
+
+            if (hora >= 5 && hora < 12) return "Manhã";
+            if (hora >= 12 && hora < 18) return "Tarde";
+            if (hora >= 18 && hora < 24) return "Noite";
+            return "Madrugada";
+        }
+
+        function saveData(event) {
+            event.preventDefault();
+
+            const valorInput = document.getElementById("valor").value.replace(",", ".");
+            const valor = parseFloat(valorInput);
+
+            if (isNaN(valor)) {
+                alert("Por favor, insira um valor válido.");
+                return;
+            }
+
+            const data = document.getElementById("data").value;
+            const horario = document.getElementById("horario").value;
+
+            const categoriaMaster = document.getElementById("categoriaMaster").value;
+            const categoria = document.getElementById("categoria").value;
+            const descricao = document.getElementById("descricao").value;
+            const tipo = document.getElementById("tipo").value;
+
+            const rsg = document.getElementById("rsg").value;
+            const tipoGasto = document.getElementById("tipoGasto").value;
+
+            const gatilho = document.getElementById("gatilho").value;
+            const sentimentoPos = document.getElementById("sentimentoPos").value;
+
+            const periodo = getPeriodoDoDia(horario);
+
+            const novaDespesa = {
+                data, horario, periodo,
+                categoriaMaster, categoria, descricao,
+                valor, tipo, rsg, tipoGasto, gatilho, sentimentoPos
+            };
+
+            let despesas = JSON.parse(localStorage.getItem("despesas")) || [];
+            despesas.push(novaDespesa);
+
+            localStorage.setItem("despesas", JSON.stringify(despesas));
+
+            alert("Cadastro realizado com sucesso!");
+            window.location.reload();
+        }
+
+        function loadData() {
+            const despesas = JSON.parse(localStorage.getItem("despesas")) || [];
+            const tableBody = document.getElementById("despesasList");
+            tableBody.innerHTML = "";
+
+            despesas.forEach((despesa, index) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                  <td>${despesa.data}</td>
+                  <td>${despesa.horario || "-"}</td>
+                  <td>${despesa.periodo || "-"}</td>
+                  <td>${despesa.categoriaMaster || "-"}</td>
+                  <td>${despesa.categoria}</td>
+                  <td>${despesa.descricao}</td>
+                  <td>${despesa.valor.toFixed(2)}</td>
+                  <td>${despesa.tipo}</td>
+                  <td>${despesa.rsg}</td>
+                  <td>${despesa.tipoGasto}</td>
+                  <td>${despesa.gatilho || "-"}</td>
+                  <td>${despesa.sentimentoPos || "-"}</td>
+                  <td>
+                      <button onclick="editData(${index})">Editar</button>
+                      <button onclick="deleteData(${index})">Deletar</button>
+                  </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        function editData(index) {
+            const despesas = JSON.parse(localStorage.getItem("despesas"));
+            const despesa = despesas[index];
+
+            document.getElementById("data").value = despesa.data;
+            document.getElementById("horario").value = despesa.horario || "";
+            document.getElementById("categoriaMaster").value = despesa.categoriaMaster || "";
+            document.getElementById("categoria").value = despesa.categoria;
+            document.getElementById("descricao").value = despesa.descricao;
+            document.getElementById("valor").value = despesa.valor;
+            document.getElementById("tipo").value = despesa.tipo;
+
+            document.getElementById("rsg").value = despesa.rsg;
+            document.getElementById("tipoGasto").value = despesa.tipoGasto;
+
+            document.getElementById("gatilho").value = despesa.gatilho || "";
+            document.getElementById("sentimentoPos").value = despesa.sentimentoPos || "";
+
+            document.getElementById("saveBtn").onclick = function () {
+                updateData(index);
+            };
+        }
+
+        function updateData(index) {
+            const valorInput = document.getElementById("valor").value.replace(",", ".");
+            const valor = parseFloat(valorInput);
+
+            if (isNaN(valor)) {
+                alert("Por favor, insira um valor válido.");
+                return;
+            }
+
+            const data = document.getElementById("data").value;
+            const horario = document.getElementById("horario").value;
+
+            const categoriaMaster = document.getElementById("categoriaMaster").value;
+            const categoria = document.getElementById("categoria").value;
+            const descricao = document.getElementById("descricao").value;
+            const tipo = document.getElementById("tipo").value;
+
+            const rsg = document.getElementById("rsg").value;
+            const tipoGasto = document.getElementById("tipoGasto").value;
+
+            const gatilho = document.getElementById("gatilho").value;
+            const sentimentoPos = document.getElementById("sentimentoPos").value;
+
+            const periodo = getPeriodoDoDia(horario);
+
+            const updatedDespesa = {
+                data, horario, periodo,
+                categoriaMaster, categoria, descricao,
+                valor, tipo, rsg, tipoGasto, gatilho, sentimentoPos
+            };
+
+            let despesas = JSON.parse(localStorage.getItem("despesas"));
+            despesas[index] = updatedDespesa;
+
+            localStorage.setItem("despesas", JSON.stringify(despesas));
+
+            alert("Cadastro atualizado com sucesso!");
+            window.location.reload();
+        }
+
+        function deleteData(index) {
+            let despesas = JSON.parse(localStorage.getItem("despesas"));
+            despesas.splice(index, 1);
+            localStorage.setItem("despesas", JSON.stringify(despesas));
+
+            alert("Cadastro deletado com sucesso!");
+            window.location.reload();
+        }
+    </script>
+</head>
+
+<body onload="loadData()">
+
+    <header>
+        <h1>Gerenciar Despesas/Entradas</h1>
+    </header>
+
+    <nav>
+        <a href="index.html">Tabela de Gastos</a>
+        <a href="cadastro.html" class="active">Cadastrar Despesa/Entrada</a>
+        <a href="debts.html">Dívidas</a>
+        <a href="monthlyExpenses.html">Gastos Mensais</a>
+        <a href="dre.html">Despesas e receitas</a>
+        <a href="burnporsemana.html">Burn por semana</a>
+        <a href="exportpdf.html">Exportar PDF</a>
+        <a href="game.html">InvestGame</a>
+        <a href="portfolio.html">Portfolio</a>
+    </nav>
+
+    <main>
+        <h1>Cadastrar Nova Despesa/Entrada</h1>
+
+        <form id="formCadastro" onsubmit="saveData(event)">
+
+            <label for="data">Data</label>
+            <input type="date" id="data" required>
+
+            <label for="horario">Horário</label>
+            <input type="time" id="horario" required>
+
+            <label for="categoriaMaster">Categoria Master</label>
+            <select id="categoriaMaster" required>
+                <option value="Moradia">Moradia</option>
+                <option value="Transporte">Transporte</option>
+                <option value="Alimentação">Alimentação</option>
+                <option value="Tráfego Pago">Tráfego Pago</option>
+                <option value="Cartão de Crédito">Cartão de Crédito</option>
+                <option value="Evento único">Evento único</option>
+                <option value="Saúde">Saúde</option>
+                <option value="Salário">Salário</option>
+                <option value="Educação">Educação</option>
+                <option value="Lazer">Lazer</option>
+                <option value="Transferência">Transferência</option>
+                <option value="Investimentos">Investimentos</option>
+                <option value="Dívidas e Obrigações">Dívidas e Obrigações</option>
+                <option value="Pets">Pets</option>
+                <option value="Pessoal">Pessoal</option>
+            </select>
+
+            <label for="categoria">Micro-Categoria</label>
+            <select id="categoria" required>
+                <option value="Água">Água</option>
+                <option value="Air BNB">Air BNB</option>
+                <option value="Aluguel Eliza">Aluguel Eliza</option>
+                <option value="Aluguel Predilleto">Aluguel Predilleto</option>
+                <option value="Aluguel UWIN">Aluguel UWIN</option>
+                <option value="Amazon">Amazon</option>
+                <option value="Assinaturas de aplicativos">Assinaturas de aplicativos</option>
+                <option value="Cartão de Crédito">Cartão de Crédito</option>
+                <option value="Bitcoin">Bitcoin</option>
+                <option value="Bolos">Bolos</option>
+                <option value="Caixinha Nubank - Spotify">Caixinha Nubank - Spotify</option>
+                <option value="Caixinha Nubank - Celular">Caixinha Nubank - Celular</option>
+                <option value="Caixinha Nubank - F1 TV">Caixinha Nubank - F1 TV</option>
+                <option value="Caixinha Nubank - Férias">Caixinha Nubank - Férias</option>
+                <option value="Caixinha Nubank - Natal das Crianças">Caixinha Nubank - Natal das Crianças</option>
+                <option value="Investimento - Lighthouse">Investimento - Lighthouse</option>
+                <option value="Calçados">Calçados</option>
+                <option value="Contador">Contador</option>
+                <option value="Cursos">Cursos</option>
+                <option value="Celular BR">Celular BR</option>
+                <option value="Celular CA">Celular CA</option>
+                <option value="Chocolateria">Chocolateria</option>
+                <option value="Cinema">Cinema</option>
+                <option value="Coffe Shop">Coffee Shop</option>
+                <option value="Cosméticos">Cosméticos</option>
+                <option value="Delivery Food">Delivery Food</option>
+                <option value="Diarista">Diarista</option>
+                <option value="Distribuidora">Distribuidora</option>
+                <option value="Dízimo">Dízimo</option>
+                <option value="Doceria">Doceria</option>
+                <option value="Drogaria">Drogaria</option>
+                <option value="Educação">Educação</option>
+                <option value="Eletrônicos">Eletrônicos</option>
+                <option value="Empréstimos">Empréstimos</option>
+                <option value="Exames e concursos">Exames e concursos</option>
+                <option value="Faculdade">Faculdade</option>
+                <option value="Férias">Férias</option>
+                <option value="Financiamento Eliza Miranda">Financiamento Eliza Miranda</option>
+                <option value="FGTS">FGTS</option>
+                <option value="FIES">FIES</option>
+                <option value="F1 game">F1 game</option>
+                <option value="Games">Games</option>
+                <option value="Impostos">Impostos</option>
+                <option value="Impostos PJ">Impostos PJ</option>
+                <option value="Impostos PJ Simples Nacional">Impostos PJ Simples Nacional</option>
+                <option value="Internet">Internet</option>
+                <option value="Investimentos">Investimentos</option>
+                <option value="IPVA">IPVA</option>
+                <option value="IPTU">IPTU</option>
+                <option value="Hospedagens AIRBNB">Hospedagens/AIRBNB</option>
+                <option value="Lavanderia">Lavanderia</option>
+                <option value="Lava-jato">Lava-jato</option>
+                <option value="Lanche e Fast-food">Lanche e Fast-food</option>
+                <option value="Livros">Livros</option>
+                <option value="Limpeza">Limpeza</option>
+                <option value="Luz">Luz</option>
+                <option value="Manutenção Casa">Manutenção Casa</option>
+                <option value="Manutenção do Carro">Manutenção do Carro</option>
+                <option value="META Ads">META Ads</option>
+                <option value="Metrô">Metrô</option>
+                <option value="Mobília e utensílios">Mobília e utensílios</option>
+                <option value="Ofertas">Ofertas</option>
+                <option value="Óticas">Óticas</option>
+                <option value="Padaria">Padaria</option>
+                <option value="Papelaria">Papelaria</option>
+                <option value="Passagem aérea">Passagem aérea</option>
+                <option value="Plano de Saúde">Plano de Saúde</option>
+                <option value="PLR">PLR</option>
+                <option value="Pensão">Pensão</option>
+                <option value="Pet Shop">Pet Shop</option>
+                <option value="PIX Conta PJ">PIX Conta PJ</option>
+                <option value="PIX Loren">PIX Loren</option>
+                <option value="PIX Pai">PIX Pai</option>
+                <option value="Passeios e expedições">Passeios e expedições</option>
+                <option value="Poupança">Poupança</option>
+                <option value="Pós-Graduação">Pós-Graduação</option>
+                <option value="Posto de Gasolina">Posto de Gasolina</option>
+                <option value="Presentes">Presentes</option>
+                <option value="Renovar CNH">Renovar CNH</option>
+                <option value="Renovar visto">Renovar visto</option>
+                <option value="Restaurantes">Restaurantes</option>
+                <option value="Roupas">Roupas</option>
+                <option value="Salário">Salário</option>
+                <option value="Serasa">Serasa</option>
+                <option value="Salão de beleza">Salão de beleza</option>
+                <option value="Seguro desemprego">Seguro desemprego</option>
+                <option value="Seguro do Carro">Seguro do Carro</option>
+                <option value="Shopping">Shopping</option>
+                <option value="Show">Show</option>
+                <option value="Sorveteria">Sorveteria</option>
+                <option value="Supermercado">Supermercado</option>
+                <option value="Taxas gerais">Taxas gerais</option>
+                <option value="Taxas - Eliza Miranda">Taxas - Eliza Miranda</option>
+                <option value="Taxas - Predilleto">Taxas - Predilleto</option>
+                <option value="Taxas - UWIN">Taxas - UWIN</option>
+                <option value="Uber">Uber</option>
+                <option value="Vale-Alimentação">Vale-Alimentação</option>
+                <option value="Vale-Transporte">Vale-Transporte</option>
+                <option value="Vestuário - Levy">Vestuário - Levy</option>
+                <option value="Vestuário - Loren">Vestuário - Loren</option>
+                <option value="Veterinário">Veterinário</option>
+            </select>
+
+            <label for="descricao">Descrição</label>
+            <input type="text" id="descricao" required>
+
+            <label for="valor">Valor (R$)</label>
+            <input type="text" id="valor" required>
+
+            <label for="tipo">Tipo</label>
+            <select id="tipo" required>
+                <option value="Entrada">Entrada</option>
+                <option value="Saída">Saída</option>
+            </select>
+
+            <label for="rsg">RSG (Retorno Sobre Gasto)</label>
+            <select id="rsg" required>
+                <option value="1">1 😡</option>
+                <option value="2">2 😕</option>
+                <option value="3">3 🙂</option>
+                <option value="4">4 😊</option>
+                <option value="5">5 🤩</option>
+            </select>
+
+            <label for="tipoGasto">Tipo de Gasto</label>
+            <select id="tipoGasto" required>
+                <option value="Arrependimento">Arrependimento</option>
+                <option value="Planejado">Planejado</option>
+                <option value="Pequeno impulso">Pequeno impulso</option>
+                <option value="Grande impulso">Grande impulso</option>
+                <option value="Setback não-evitável">Setback não-evitável</option>
+                <option value="Setback evitável">Setback evitável</option>
+                <option value="Sonho de vida">Sonho de vida</option>
+            </select>
+
+            <!-- GATILHO EMOCIONAL -->
+            <label for="gatilho">Gatilho Emocional</label>
+            <select id="gatilho" required>
+                <option value="Agradar parceiro">Agradar parceiro</option>
+                <option value="Ajudar alguém">Ajudar alguém</option>
+                <option value="Ansiedade">Ansiedade</option>
+                <option value="Atividade conjunta não planejada">Atividade conjunta não planejada</option>
+                <option value="Apoio financeiro a parente">Apoio financeiro a parente</option>
+                <option value="Cansaço">Cansaço</option>
+                <option value="Comemorações">Comemorações</option>
+                <option value="Confraternizações">Confraternizações</option>
+                <option value="Conveniência">Conveniência</option>
+                <option value="Convite inesperado de amigos">Convite inesperado de amigos</option>
+                <option value="Divisão de contas inesperada">Divisão de contas inesperada</option>
+                <option value="Emoção positiva (celebração)">Emoção positiva (celebração)</option>
+                <option value="Empréstimo inesperado">Empréstimo inesperado</option>
+                <option value="Eventos">Eventos</option>
+                <option value="Evitar conflito familiar">Evitar conflito familiar</option>
+                <option value="Evitar discussão com parceiro">Evitar discussão com parceiro</option>
+                <option value="Favor financeiro">Favor financeiro</option>
+                <option value="Falta de planejamento">Falta de planejamento</option>
+                <option value="Fome fora de hora">Fome fora de hora</option>
+                <option value="Frustração">Frustração</option>
+                <option value="Happy Social">Social</option>
+                <option value="Imagem profissional">Imagem profissional</option>
+                <option value="Indicação de influencer">Indicação de influencer</option>
+                <option value="Influência digital">Influência digital</option>
+                <option value="Manter pertencimento ao grupo">Manter pertencimento ao grupo</option>
+                <option value="Networking">Networking</option>
+                <option value="Pedido de familiar - esposa">Pedido de familiar - esposa</option>
+                <option value="Pedido de familiar - parentes">Pedido de familiar - parentes</option>
+                <option value="Pedido de PIX">Pedido de PIX</option>
+                <option value="Pressão no trabalho">Pressão no trabalho</option>
+                <option value="Pressão social de amigos">Pressão social de amigos</option>
+                <option value="Presentes e celebrações">Presentes e celebrações</option>
+                <option value="Problema imprevisto de terceiros">Problema imprevisto de terceiros</option>
+                <option value="Promoção enviada">Promoção enviada</option>
+                <option value="Recompensa">Recompensa</option>
+                <option value="Sem gatilho">Sem gatilho</option>
+                <option value="Stress">Stress</option>
+                <option value="Tédio">Tédio</option>
+                <option value="Tristeza">Tristeza</option>
+                <option value="Urgência familiar">Urgência familiar</option>
+            </select>
+
+            <!-- NOVO CAMPO: SENTIMENTO PÓS-PAGAMENTO -->
+            <label for="sentimentoPos">Sentimento Pós-Pagamento</label>
+            <select id="sentimentoPos" required>
+                <option value="Muito satisfeito">Muito satisfeito</option>
+                <option value="Satisfeito">Satisfeito</option>
+                <option value="Neutro">Neutro</option>
+                <option value="Orgulhoso">Orgulhoso</option>
+                <option value="Aliviado">Aliviado</option>
+                <option value="Leve arrependimento">Leve arrependimento</option>
+                <option value="Arrependido">Arrependido</option>
+                <option value="Culpado">Culpado</option>
+                <option value="Ansioso">Ansioso</option>
+                <option value="Preocupado">Preocupado</option>
+                <option value="Incomodado">Incomodado</option>
+            </select>
+
+            <button type="submit" id="saveBtn">Salvar</button>
+        </form>
+    </main>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Horário</th>
+                <th>Período</th>
+                <th>Categoria Master</th>
+                <th>Micro-Categoria</th>
+                <th>Descrição</th>
+                <th>Valor</th>
+                <th>Tipo</th>
+                <th>RSG</th>
+                <th>Tipo de Gasto</th>
+                <th>Gatilho Emocional</th>
+                <th>Sentimento Pós</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="despesasList"></tbody>
+    </table>
+
+</body>
+</html>

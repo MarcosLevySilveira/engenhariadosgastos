@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Dashboard de Finanças — Master + Micro (Acordeões)</title>
+    <link rel="stylesheet" href="styles2.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Controle de Finanças Pessoais — Dashboard</h1>
+        <nav>
+            <a href="index.html" class="active">Antigo Dashboard</a>
+            <a href="index2.html">Novo dashboard</a>
+            <a href="cadastro.html">Cadastrar Despesa/Entrada</a>
+            <a href="debts.html">Dívidas</a>
+            <a href="monthlyExpenses.html">Gastos Mensais</a>
+            <a href="dre.html">Despesas e receitas</a>
+            <a href="burnporsemana.html">Burn por semana</a>
+            <a href="exportpdf.html">Exportar PDF</a>
+            <a href="game.html">InvestGame</a>
+            <a href="portfolio.html">Portfolio</a>
+        </nav>
+    </header>
+
+    <main>
+        <!-- filtro de datas -->
+        <div class="filtro-datas">
+            <label for="data-inicio">Data início:</label>
+            <input type="date" id="data-inicio">
+            <label for="data-fim">Data fim:</label>
+            <input type="date" id="data-fim">
+            <button onclick="atualizarTabela()" class="btn-small">Filtrar</button>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpis" aria-hidden="false">
+            <div class="kpi">
+                <h3>Total Entradas</h3>
+                <p id="total-entradas">0,00</p>
+            </div>
+            <div class="kpi">
+                <h3>Total Saídas</h3>
+                <p id="total-saidas">0,00</p>
+            </div>
+            <div class="kpi">
+                <h3>Saldo Geral</h3>
+                <p id="total-categorias">0,00</p>
+            </div>
+        </div>
+
+        <!-- Masters: Entradas -->
+        <div class="section-title">
+            <h2>Categorias Master — Entradas</h2>
+            <div>
+                <button class="btn-small" onclick="expandAll('entradas')">Expandir tudo</button>
+                <button class="btn-small" onclick="collapseAll('entradas')">Colapsar tudo</button>
+            </div>
+        </div>
+        <div id="cards-master-entradas" class="masters-row" aria-live="polite"></div>
+
+        <!-- Masters: Saídas -->
+        <div class="section-title">
+            <h2>Categorias Master — Saídas</h2>
+            <div>
+                <button class="btn-small" onclick="expandAll('saidas')">Expandir tudo</button>
+                <button class="btn-small" onclick="collapseAll('saidas')">Colapsar tudo</button>
+            </div>
+        </div>
+        <div id="cards-master-saidas" class="masters-row" aria-live="polite"></div>
+
+        <!-- Grupos (Acordeões) - Micro por Master Entradas -->
+        <div class="section-title"><h2>Micro-categorias por Categoria Master — Entradas</h2></div>
+        <div id="grupo-master-entradas" class="groups-wrapper"></div>
+
+        <!-- Grupos (Acordeões) - Micro por Master Saídas -->
+        <div class="section-title"><h2>Micro-categorias por Categoria Master — Saídas</h2></div>
+        <div id="grupo-master-saidas" class="groups-wrapper"></div>
+
+        <!-- Cards por micro-categorias (mantidos) -->
+        <h2>Entradas (por Micro-Categoria)</h2>
+        <div id="cards-entradas" class="card-container"></div>
+
+        <h2>Saídas (por Micro-Categoria)</h2>
+        <div id="cards-saidas" class="card-container"></div>
+
+        <!-- Tabela detalhada -->
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Categoria Master</th>
+                    <th>Categoria</th>
+                    <th>Descrição</th>
+                    <th>Valor (R$)</th>
+                    <th>Tipo</th>
+                    <th>Saldo (R$)</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-dados"></tbody>
+        </table>
+
+        <!-- Gráficos -->
+        <div class="charts">
+            <canvas id="graficoEntradas" aria-label="Gráfico de Entradas" role="img"></canvas>
+            <canvas id="graficoSaidas" aria-label="Gráfico de Saídas" role="img"></canvas>
+        </div>
+    </main>
+
+    <script>
+        // Chart references (preservadas)
+        let chartEntradas = null;
+        let chartSaidas = null;
+
+        // Carrega despesas do localStorage (espera formato com categoriaMaster)
+        function carregarDespesas() {
+            try {
+                const raw = localStorage.getItem("despesas");
+                if(!raw) return [];
+                const arr = JSON.parse(raw);
+                if(!Array.isArray(arr)) return [];
+                return arr;
+            } catch (e) {
+                console.error("Erro lendo despesas do localStorage:", e);
+                return [];
+            }
+        }
+
+        // Atualiza tudo: tabela, cards, masters e gráficos
+        function atualizarTabela(){
+            const despesas = carregarDespesas();
+            const tabela = document.getElementById("tabela-dados");
+            const dataInicio = document.getElementById("data-inicio").value;
+            const dataFim = document.getElementById("data-fim").value;
+            tabela.innerHTML = "";
+
+            let totalEntradas = 0;
+            let totalSaidas = 0;
+            const somatorioCategoriasEntrada = {};
+            const somatorioCategoriasSaida = {};
+            const somatorioMasterEntrada = {};
+            const somatorioMasterSaida = {};
+            const microPorMasterEntrada = {}; // { master: { micro: valor } }
+            const microPorMasterSaida = {};
+            let saldoAcumulado = 0;
+
+            // Filtra periodo
+            const despesasFiltradas = despesas.filter(desp => {
+                const dataDesp = new Date(desp.data);
+                const inicio = dataInicio ? new Date(dataInicio) : null;
+                const fim = dataFim ? new Date(dataFim) : null;
+                if (isNaN(dataDesp)) return true; // manter se data inválida no registro
+                return (!inicio || dataDesp >= inicio) && (!fim || dataDesp <= fim);
+            });
+
+            // Ordena por data para saldo coerente
+            despesasFiltradas.sort((a,b) => new Date(a.data) - new Date(b.data));
+
+            despesasFiltradas.forEach(despesa => {
+                const row = tabela.insertRow();
+                const cellData = row.insertCell(0);
+                const cellMaster = row.insertCell(1);
+                const cellCategoria = row.insertCell(2);
+                const cellDescricao = row.insertCell(3);
+                const cellValor = row.insertCell(4);
+                const cellTipo = row.insertCell(5);
+                const cellSaldo = row.insertCell(6);
+
+                // Garante tipo consistente
+                const valorNum = Number(despesa.valor) || 0;
+                const masterName = despesa.categoriaMaster || "Sem Categoria Master";
+
+                cellData.textContent = despesa.data || "-";
+                cellMaster.textContent = masterName;
+                cellCategoria.textContent = despesa.categoria || "-";
+                cellDescricao.textContent = despesa.descricao || "-";
+                cellValor.textContent = valorNum.toFixed(2);
+                cellTipo.textContent = despesa.tipo || "-";
+
+                if (despesa.tipo === "Entrada") {
+                    totalEntradas += valorNum;
+                    saldoAcumulado += valorNum;
+                    somatorioCategoriasEntrada[despesa.categoria] = (somatorioCategoriasEntrada[despesa.categoria] || 0) + valorNum;
+                    somatorioMasterEntrada[masterName] = (somatorioMasterEntrada[masterName] || 0) + valorNum;
+                    microPorMasterEntrada[masterName] = microPorMasterEntrada[masterName] || {};
+                    microPorMasterEntrada[masterName][despesa.categoria] = (microPorMasterEntrada[masterName][despesa.categoria] || 0) + valorNum;
+                } else {
+                    totalSaidas += valorNum;
+                    saldoAcumulado -= valorNum;
+                    somatorioCategoriasSaida[despesa.categoria] = (somatorioCategoriasSaida[despesa.categoria] || 0) + valorNum;
+                    somatorioMasterSaida[masterName] = (somatorioMasterSaida[masterName] || 0) + valorNum;
+                    microPorMasterSaida[masterName] = microPorMasterSaida[masterName] || {};
+                    microPorMasterSaida[masterName][despesa.categoria] = (microPorMasterSaida[masterName][despesa.categoria] || 0) + valorNum;
+                }
+
+                cellSaldo.textContent = saldoAcumulado.toFixed(2);
+            });
+
+            // Atualiza KPIs
+            document.getElementById("total-entradas").textContent = totalEntradas.toFixed(2);
+            document.getElementById("total-saidas").textContent = Math.abs(totalSaidas).toFixed(2);
+            document.getElementById("total-categorias").textContent = (totalEntradas - totalSaidas).toFixed(2);
+
+            // Renderiza cards de micro atuais (com percentuais)
+            renderMicroCards(somatorioCategoriasEntrada, somatorioCategoriasSaida, totalEntradas, totalSaidas);
+
+            // Renderiza masters (resumo com percentuais)
+            renderMasterCards(somatorioMasterEntrada, somatorioMasterSaida, totalEntradas, totalSaidas);
+
+            // Renderiza acordeões por master com micro-categorias (com percentuais)
+            renderMicroByMaster(microPorMasterEntrada, microPorMasterSaida, totalEntradas, totalSaidas);
+
+            // Gera gráficos (funções protegidas/estado atual)
+            criarGraficoEntradas(somatorioCategoriasEntrada);
+            criarGraficoSaidas(somatorioCategoriasSaida);
+        }
+
+        // Renderiza cards das micro-categorias (agora com percentual)
+        function renderMicroCards(somatorioCategoriasEntrada, somatorioCategoriasSaida, totalEntradas, totalSaidas){
+            const cardsEntradas = document.getElementById("cards-entradas");
+            const cardsSaidas = document.getElementById("cards-saidas");
+            cardsEntradas.innerHTML = "";
+            cardsSaidas.innerHTML = "";
+
+            const entradasOrdenadas = Object.entries(somatorioCategoriasEntrada).sort(([,a],[,b]) => b - a);
+            entradasOrdenadas.forEach(([categoria, valor]) => {
+                const percentual = totalEntradas ? (valor / totalEntradas * 100).toFixed(1) : "0.0";
+                const card = document.createElement("div");
+                card.className = "card-micro";
+                card.innerHTML = `<h5>${categoria}</h5><p>R$ ${valor.toFixed(2)} (${percentual}%)</p>`;
+                cardsEntradas.appendChild(card);
+            });
+
+            const saidasOrdenadas = Object.entries(somatorioCategoriasSaida).sort(([,a],[,b]) => b - a);
+            saidasOrdenadas.forEach(([categoria, valor]) => {
+                const percentual = totalSaidas ? (valor / totalSaidas * 100).toFixed(1) : "0.0";
+                const card = document.createElement("div");
+                card.className = "card-micro";
+                card.innerHTML = `<h5>${categoria}</h5><p>R$ ${valor.toFixed(2)} (${percentual}%)</p>`;
+                cardsSaidas.appendChild(card);
+            });
+        }
+
+        // Renderiza cards resumo das categorias Master (clicáveis) — com percentual
+        function renderMasterCards(somatorioMasterEntrada, somatorioMasterSaida, totalEntradas, totalSaidas){
+            const masterEntradas = document.getElementById("cards-master-entradas");
+            const masterSaidas = document.getElementById("cards-master-saidas");
+            masterEntradas.innerHTML = "";
+            masterSaidas.innerHTML = "";
+
+            const mastersEntradaOrdenados = Object.entries(somatorioMasterEntrada).sort(([,a],[,b]) => b - a);
+            mastersEntradaOrdenados.forEach(([master, valor]) => {
+                const percentual = totalEntradas ? (valor / totalEntradas * 100).toFixed(1) : "0.0";
+                const card = document.createElement("div");
+                card.className = "card-master";
+                card.innerHTML = `<h4>${master}</h4><p>R$ ${valor.toFixed(2)} (${percentual}%)</p>`;
+                // Ao clicar no master, abre o respectivo acordeão
+                card.addEventListener("click", () => toggleGroup(master, "entradas"));
+                masterEntradas.appendChild(card);
+            });
+
+            const mastersSaidaOrdenados = Object.entries(somatorioMasterSaida).sort(([,a],[,b]) => b - a);
+            mastersSaidaOrdenados.forEach(([master, valor]) => {
+                const percentual = totalSaidas ? (valor / totalSaidas * 100).toFixed(1) : "0.0";
+                const card = document.createElement("div");
+                card.className = "card-master";
+                card.innerHTML = `<h4>${master}</h4><p>R$ ${valor.toFixed(2)} (${percentual}%)</p>`;
+                card.addEventListener("click", () => toggleGroup(master, "saidas"));
+                masterSaidas.appendChild(card);
+            });
+        }
+
+        // Renderiza grupos (acordeões) por master - cada master terá header + lista de micro-cards — com percentuais
+        function renderMicroByMaster(microPorMasterEntrada, microPorMasterSaida, totalEntradas, totalSaidas){
+            const containerEntrada = document.getElementById("grupo-master-entradas");
+            const containerSaida = document.getElementById("grupo-master-saidas");
+            containerEntrada.innerHTML = "";
+            containerSaida.innerHTML = "";
+
+            // ENTRADAS
+            const entradaMasters = Object.entries(microPorMasterEntrada)
+                .map(([master, micros]) => ({ master, micros, total: Object.values(micros).reduce((s,v)=>s+v,0) }))
+                .sort((a,b) => b.total - a.total);
+
+            entradaMasters.forEach(({master, micros, total}) => {
+                const percentualMaster = totalEntradas ? (total / totalEntradas * 100).toFixed(1) : "0.0";
+                const group = document.createElement("div");
+                group.className = "group";
+                group.id = `group-entradas-${slugify(master)}`;
+
+                const header = document.createElement("div");
+                header.className = "group-header";
+                header.innerHTML = `
+                    <div class="left">
+                        <strong aria-hidden="true">▾</strong>
+                        <h4>${master}</h4>
+                    </div>
+                    <div class="right">
+                        <p>R$ ${total.toFixed(2)} (${percentualMaster}%)</p>
+                    </div>
+                `;
+
+                // Toggle ao clicar
+                header.addEventListener("click", () => {
+                    const body = group.querySelector(".group-body");
+                    body.classList.toggle("open");
+                });
+
+                const body = document.createElement("div");
+                body.className = "group-body";
+                const microWrap = document.createElement("div");
+                microWrap.className = "micro-cards";
+
+                const microsOrdenados = Object.entries(micros).sort(([,a],[,b]) => b - a);
+                microsOrdenados.forEach(([micro, valor]) => {
+                    const percentualMicro = totalEntradas ? (valor / totalEntradas * 100).toFixed(1) : "0.0";
+                    const card = document.createElement("div");
+                    card.className = "card-micro";
+                    card.innerHTML = `<h5>${micro}</h5><p>R$ ${valor.toFixed(2)} (${percentualMicro}%)</p>`;
+                    microWrap.appendChild(card);
+                });
+
+                body.appendChild(microWrap);
+                group.appendChild(header);
+                group.appendChild(body);
+                containerEntrada.appendChild(group);
+            });
+
+            // SAIDAS
+            const saidaMasters = Object.entries(microPorMasterSaida)
+                .map(([master, micros]) => ({ master, micros, total: Object.values(micros).reduce((s,v)=>s+v,0) }))
+                .sort((a,b) => b.total - a.total);
+
+            saidaMasters.forEach(({master, micros, total}) => {
+                const percentualMaster = totalSaidas ? (total / totalSaidas * 100).toFixed(1) : "0.0";
+                const group = document.createElement("div");
+                group.className = "group";
+                group.id = `group-saidas-${slugify(master)}`;
+
+                const header = document.createElement("div");
+                header.className = "group-header";
+                header.innerHTML = `
+                    <div class="left">
+                        <strong aria-hidden="true">▾</strong>
+                        <h4>${master}</h4>
+                    </div>
+                    <div class="right">
+                        <p>R$ ${total.toFixed(2)} (${percentualMaster}%)</p>
+                    </div>
+                `;
+
+                header.addEventListener("click", () => {
+                    const body = group.querySelector(".group-body");
+                    body.classList.toggle("open");
+                });
+
+                const body = document.createElement("div");
+                body.className = "group-body";
+                const microWrap = document.createElement("div");
+                microWrap.className = "micro-cards";
+
+                const microsOrdenados = Object.entries(micros).sort(([,a],[,b]) => b - a);
+                microsOrdenados.forEach(([micro, valor]) => {
+                    const percentualMicro = totalSaidas ? (valor / totalSaidas * 100).toFixed(1) : "0.0";
+                    const card = document.createElement("div");
+                    card.className = "card-micro";
+                    card.innerHTML = `<h5>${micro}</h5><p>R$ ${valor.toFixed(2)} (${percentualMicro}%)</p>`;
+                    microWrap.appendChild(card);
+                });
+
+                body.appendChild(microWrap);
+                group.appendChild(header);
+                group.appendChild(body);
+                containerSaida.appendChild(group);
+            });
+        }
+
+        // Toggle single group programaticamente (quando clicar master card)
+        function toggleGroup(master, tipo){
+            const id = tipo === 'entradas' ? `group-entradas-${slugify(master)}` : `group-saidas-${slugify(master)}`;
+            const el = document.getElementById(id);
+            if(!el) return;
+            const body = el.querySelector(".group-body");
+            body.classList.toggle("open");
+            el.scrollIntoView({behavior:"smooth", block:"center"});
+        }
+
+        // Expandir / Colapsar tudo em uma seção
+        function expandAll(tipo){
+            const prefix = tipo === 'entradas' ? 'group-entradas-' : 'group-saidas-';
+            const groups = document.querySelectorAll(`[id^="${prefix}"] .group-body`);
+            groups.forEach(g => g.classList.add("open"));
+        }
+        function collapseAll(tipo){
+            const prefix = tipo === 'entradas' ? 'group-entradas-' : 'group-saidas-';
+            const groups = document.querySelectorAll(`[id^="${prefix}"] .group-body`);
+            groups.forEach(g => g.classList.remove("open"));
+        }
+
+        // util: cria slug seguro para ids
+        function slugify(text){
+            return String(text || "").toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9\-]/g,'').substring(0,60);
+        }
+
+        // Funções de gráfico (protegidas — não sobrescrevem se quiser implementar mais tarde)
+        function criarGraficoEntradas(somatorioCategoriasEntrada) {
+            // Proteção: destrói chart anterior se existir
+            if(chartEntradas) {
+                try { chartEntradas.destroy(); } catch(e){/* ignore */ }
+                chartEntradas = null;
+            }
+            // Não cria nada por padrão — evita erros se não quiser gráficos agora.
+            // Se quiser que eu gere os gráficos automaticamente com percentuais, me avise.
+        }
+
+        function criarGraficoSaidas(somatorioCategoriasSaida) {
+            if(chartSaidas) {
+                try { chartSaidas.destroy(); } catch(e){/* ignore */ }
+                chartSaidas = null;
+            }
+            // Não cria nada por padrão.
+        }
+
+        // Inicialização
+        window.addEventListener("load", atualizarTabela);
+
+        // Escuta de storage (útil quando salvar/des salvar em outra aba)
+        window.addEventListener("storage", (e) => {
+            if(e.key === "despesas") atualizarTabela();
+        });
+    </script>
+</body>
+</html>

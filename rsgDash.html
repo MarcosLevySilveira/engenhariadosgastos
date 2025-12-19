@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard Matricial – RSG × Tipo de Gasto</title>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+        margin: 20px;
+    }
+
+    h1, h2 {
+        text-align: center;
+    }
+
+    .card {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        margin-bottom: 30px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+
+    table th, table td {
+        padding: 8px;
+        border: 1px solid #ccc;
+        text-align: center;
+    }
+
+    /* Heatmap Colors */
+    .heat-low { background: #ffb3b3; }
+    .heat-mid { background: #ffe680; }
+    .heat-high { background: #b3ffb3; }
+
+</style>
+</head>
+
+<body>
+
+<h1>Dashboard Matricial – RSG × Tipo de Gasto</h1>
+
+<!-- ---------------- MATRIZ ---------------- -->
+<div class="card">
+    <h2>Matriz RSG × Tipo de Gasto</h2>
+    <div id="matrizContainer"></div>
+</div>
+
+<!-- ---------------- HEATMAP ---------------- -->
+<div class="card">
+    <h2>Heatmap Comportamental</h2>
+    <div id="heatmapContainer"></div>
+</div>
+
+<!-- ---------------- BUBBLE CHART ---------------- -->
+<div class="card">
+    <h2>Gráfico de Bolhas — RSG × Tipo de Gasto</h2>
+    <canvas id="bubbleChart" width="400" height="300"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+const rsgLevels = ["1","2","3","4","5"];
+const rsgEmojis = { "1": "😡", "2": "😕", "3": "🙂", "4": "😊", "5": "🤩" };
+
+const tiposGasto = [
+    "Planejado",
+    "Pequeno impulso",
+    "Grande impulso",
+    "Setback não-evitável",
+    "Setback evitável",
+    "Arrependimento"
+];
+
+function carregarDados() {
+    return JSON.parse(localStorage.getItem("despesas")) || [];
+}
+
+// ---------- CALCULAR MATRIZ ----------
+function gerarMatriz() {
+    const dados = carregarDados();
+
+    // Inicializa matriz vazia
+    const matriz = {};
+    rsgLevels.forEach(r => {
+        matriz[r] = {};
+        tiposGasto.forEach(t => matriz[r][t] = 0);
+    });
+
+    // Preenche contagens
+    dados.forEach(item => {
+        if (matriz[item.rsg] && matriz[item.rsg][item.tipoGasto] !== undefined) {
+            matriz[item.rsg][item.tipoGasto]++;
+        }
+    });
+
+    return matriz;
+}
+
+// ---------- TABELA NORMAL ----------
+function renderizarTabela(matriz) {
+    let html = `<table><tr><th>RSG</th>`;
+
+    tiposGasto.forEach(t => html += `<th>${t}</th>`);
+    html += `</tr>`;
+
+    rsgLevels.forEach(r => {
+        html += `<tr><td>${rsgEmojis[r]} (${r})</td>`;
+        tiposGasto.forEach(t => {
+            html += `<td>${matriz[r][t]}</td>`;
+        });
+        html += `</tr>`;
+    });
+
+    html += `</table>`;
+    document.getElementById("matrizContainer").innerHTML = html;
+}
+
+// ---------- HEATMAP ----------
+function renderizarHeatmap(matriz) {
+    let html = `<table><tr><th>RSG</th>`;
+
+    tiposGasto.forEach(t => html += `<th>${t}</th>`);
+    html += `</tr>`;
+
+    const maxVal = Math.max(
+        ...rsgLevels.flatMap(r => tiposGasto.map(t => matriz[r][t]))
+    );
+
+    rsgLevels.forEach(r => {
+        html += `<tr><td>${rsgEmojis[r]} (${r})</td>`;
+        tiposGasto.forEach(t => {
+            const v = matriz[r][t];
+            let cls = "heat-low";
+            if (v > maxVal * 0.66) cls = "heat-high";
+            else if (v > maxVal * 0.33) cls = "heat-mid";
+
+            html += `<td class="${cls}">${v}</td>`;
+        });
+        html += `</tr>`;
+    });
+
+    html += `</table>`;
+    document.getElementById("heatmapContainer").innerHTML = html;
+}
+
+// ---------- BUBBLE CHART ----------
+function renderizarBubbleChart(matriz) {
+    const dataset = [];
+
+    rsgLevels.forEach((r, yIndex) => {
+        tiposGasto.forEach((t, xIndex) => {
+            const count = matriz[r][t];
+            if (count > 0) {
+                dataset.push({
+                    label: `${rsgEmojis[r]} / ${t}`,
+                    data: [{ x: xIndex, y: yIndex, r: count * 5 }],
+                });
+            }
+        });
+    });
+
+    new Chart(document.getElementById("bubbleChart"), {
+        type: "bubble",
+        data: {
+            datasets: dataset
+        },
+        options: {
+            scales: {
+                x: {
+                    min: -1,
+                    max: tiposGasto.length,
+                    ticks: {
+                        callback: (val) => tiposGasto[val] || ""
+                    }
+                },
+                y: {
+                    min: -1,
+                    max: rsgLevels.length,
+                    ticks: {
+                        callback: (val) => rsgEmojis[rsgLevels[val]] || ""
+                    }
+                }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+}
+
+// ---------- INICIALIZAR DASHBOARD ----------
+function init() {
+    const matriz = gerarMatriz();
+    renderizarTabela(matriz);
+    renderizarHeatmap(matriz);
+    renderizarBubbleChart(matriz);
+}
+
+init();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Monitor de Portfólio — Lighthouse</title>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- html2canvas for PNG export -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+<style>
+:root{
+  --bg:#f5f7fa;
+  --card:#ffffff;
+  --muted:#6b7280;
+  --accent:#2563eb;
+  --danger:#ef4444;
+  --success:#10b981;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:#111;padding:18px}
+header{display:flex;align-items:center;gap:16px;margin-bottom:14px}
+h1{font-size:20px;margin:0}
+nav a{margin-right:10px;color:var(--muted);text-decoration:none}
+.container{display:grid;grid-template-columns:1fr 380px;gap:18px;align-items:start}
+.main{background:transparent}
+.card-grid{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.card{background:var(--card);padding:14px;border-radius:10px;box-shadow:0 1px 6px rgba(15,23,42,0.06);min-width:150px;flex:1}
+.card h3{margin:0;font-size:13px;color:var(--muted)}
+.card p{margin:6px 0 0;font-size:18px;font-weight:600}
+.controls{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 1px 6px rgba(15,23,42,0.06);margin-bottom:12px}
+.form-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.form-row input[type=text], .form-row input[type=date], .form-row select{padding:8px;border:1px solid #e6e9ef;border-radius:6px;flex:1}
+.form-row button{background:var(--accent);color:#fff;border:none;padding:8px 12px;border-radius:6px;cursor:pointer}
+.small{font-size:12px;color:var(--muted)}
+.table-wrap{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 1px 6px rgba(15,23,42,0.06);margin-top:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:8px;text-align:left;border-bottom:1px solid #f1f3f5}
+.actions button{margin-right:6px;padding:6px 8px;border-radius:6px;border:none;cursor:pointer}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-muted{background:#e6edf9;color:#032a63}
+.kpi-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+#graficoPortfolio{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 1px 6px rgba(15,23,42,0.06);max-width:100%;margin-bottom:12px}
+
+/* modal */
+.modal-backdrop{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.35);display:none;align-items:center;justify-content:center;z-index:40}
+.modal{background:var(--card);padding:16px;border-radius:10px;min-width:320px;max-width:600px}
+.modal h2{margin:0 0 10px 0}
+.modal .form-row{flex-direction:column;align-items:stretch}
+
+/* toast */
+.toast{position:fixed;right:18px;bottom:18px;background:#111;color:#fff;padding:10px 14px;border-radius:8px;opacity:0;transform:translateY(8px);transition:all .28s;z-index:60}
+.toast.show{opacity:1;transform:none}
+
+/* loader */
+.loader{display:inline-block;width:14px;height:14px;border-radius:50%;border:3px solid rgba(0,0,0,0.08);border-top-color:var(--accent);animation:spin .9s linear infinite;margin-left:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* filters area */
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.filter-input{padding:8px;border-radius:6px;border:1px solid #e6e9ef}
+
+/* small helpers */
+.badge{background:#eef2ff;color:var(--accent);padding:4px 8px;border-radius:999px;font-size:12px}
+.export-row{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-bottom:8px}
+.footer-links{display:flex;gap:8px;margin-top:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Monitor de Portfólio</h1>
+  <nav>
+    <a href="index.html">Tabela de Gastos</a>
+        <a href="cadastro.html">Cadastrar Despesa/Entrada</a>
+        <a href="debts.html">Dívidas</a>
+        <a href="monthlyExpenses.html">Gastos Mensais</a>
+        <a href="dre.html">Despesas e receitas</a>
+        <a href="burnporsemana.html">Burn por semana</a>
+        <a href="exportpdf.html">Exportar PDF</a>
+        <a href="game.html">InvestGame</a>
+        <a href="portfolio.html">Portfolio</a>
+    </nav>
+</header>
+
+<div class="container">
+  <div class="main">
+    <!-- KPI Row -->
+    <div class="kpi-row">
+      <div class="card"><h3>Capital Investido</h3><p id="kpi-capital">R$ 0,00</p></div>
+      <div class="card"><h3>Valor Atual</h3><p id="kpi-valor">R$ 0,00</p></div>
+      <div class="card"><h3>Rentabilidade Total</h3><p id="kpi-rent">0,00%</p></div>
+      <div class="card"><h3>Rentabilidade Anualizada (estim.)</h3><p id="kpi-annual">0,00%</p></div>
+    </div>
+
+    <!-- Filters & Export -->
+    <div class="controls">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="small">Filtros e exportação</div>
+        <div class="export-row">
+          <button id="exportCsvBtn" class="form-btn">Exportar CSV</button>
+          <button id="exportPngBtn" class="form-btn">Exportar PNG</button>
+        </div>
+      </div>
+
+      <div class="filters">
+        <input id="filterStart" class="filter-input" type="date" />
+        <input id="filterEnd" class="filter-input" type="date" />
+        <input id="filterMin" class="filter-input" placeholder="Valor min (R$)" />
+        <input id="filterMax" class="filter-input" placeholder="Valor max (R$)" />
+        <input id="filterSearch" class="filter-input" placeholder="Pesquisar investimento" />
+        <button id="applyFilters" class="form-btn">Aplicar</button>
+        <button id="clearFilters" class="form-btn" style="background:#e6edf9;color:#032a63">Limpar</button>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div id="graficoPortfolio">
+      <canvas id="chartCanvas"></canvas>
+    </div>
+
+    <!-- Aportes Form -->
+    <div class="card-grid">
+      <div class="card" style="flex:1 1 420px">
+        <h3>Novo Aporte</h3>
+        <div class="form-row">
+          <input id="inpInvestimento" type="text" placeholder="Nome do investimento (ex: Lighthouse)" value="Lighthouse" />
+          <input id="inpDataAporte" type="date" />
+        </div>
+        <div class="form-row">
+          <input id="inpValorAporte" type="text" placeholder="Valor (R$)" />
+          <button id="btnSalvarAporte">Salvar aporte</button>
+        </div>
+        <div class="small">Ao salvar, os dados vão para o histórico e recalculam os KPIs.</div>
+      </div>
+
+      <div class="card" style="flex:1 1 280px">
+        <h3>Atualizar Valor do Portfólio</h3>
+        <div class="form-row">
+          <input id="inpInvestimentoAtual" type="text" placeholder="Investimento" value="Lighthouse" />
+          <input id="inpDataAtual" type="date" />
+        </div>
+        <div class="form-row">
+          <input id="inpValorAtual" type="text" placeholder="Valor total (R$)" />
+          <button id="btnSalvarValor">Salvar valor</button>
+        </div>
+        <div class="small">Use para registrar checkpoints do valor do portfólio.</div>
+      </div>
+    </div>
+
+    <!-- Simulation -->
+    <div class="card-grid">
+      <div class="card" style="flex:1 1 420px">
+        <h3>Simulação: gotejamento mensal</h3>
+        <div class="form-row">
+          <input id="simInvest" type="text" value="Lighthouse" />
+          <input id="simMonthly" type="text" placeholder="Aporte mensal (R$)" />
+        </div>
+        <div class="form-row">
+          <input id="simMonths" type="number" placeholder="Meses (ex: 12)" />
+          <button id="btnSimular">Simular</button>
+        </div>
+        <div id="simResult" class="small"></div>
+      </div>
+
+      <div class="card" style="flex:1 1 280px">
+        <h3>Resumo rápido</h3>
+        <div class="small">Dias desde primeiro aporte: <b id="daysSince">0</b></div>
+        <div class="small">Taxa média diária estimada: <b id="dailyRate">0%</b></div>
+        <div class="small">Última atualização: <b id="lastUpdate">—</b></div>
+      </div>
+    </div>
+
+    <!-- Tables -->
+    <div class="table-wrap">
+      <h3>Aportes</h3>
+      <table id="tableAportes">
+        <thead><tr><th>Investimento</th><th>Data</th><th>Valor</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="table-wrap" style="margin-top:10px">
+      <h3>Checkpoints (Valor do portfólio)</h3>
+      <table id="tableValores">
+        <thead><tr><th>Investimento</th><th>Data</th><th>Valor</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="footer-links">
+      <button id="clearAll" class="btn-danger">Limpar todos os dados</button>
+    </div>
+  </div>
+
+  <!-- Right column: contextual help / details -->
+  <aside style="padding-left:10px">
+    <div class="card-grid" style="flex-direction:column">
+      <div class="card">
+        <h3>Detalhamento</h3>
+        <div class="small">Clique em um aporte para ver detalhes, editar ou excluir.</div>
+      </div>
+
+      <div class="card">
+        <h3>Export & Backup</h3>
+        <div class="small">Exportar CSV contém aportes + checkpoints. PNG captura a tela do dashboard.</div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- Modal -->
+<div id="modalBackdrop" class="modal-backdrop">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h2 id="modalTitle">Detalhe do registro</h2>
+    <div id="modalContent"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button id="modalSave" class="form-btn">Salvar</button>
+      <button id="modalDelete" class="btn-danger">Excluir</button>
+      <button id="modalClose" class="form-btn" style="background:#e6edf9;color:#032a63">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast">Mensagem</div>
+
+<script>
+/* ====== Helpers ====== */
+const currencyFmt = (v) => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v);
+const formatDateBR = (iso) => {
+  if(!iso) return '';
+  const d = new Date(iso + (iso.length===10? 'T00:00:00' : ''));
+  if (isNaN(d)) return iso;
+  return d.toLocaleDateString('pt-BR');
+};
+const parseNumber = (s) => {
+  if (s === null || s === undefined) return NaN;
+  return Number(String(s).replace(/\./g,'').replace(',', '.').replace(/[^\d\.\-]/g,''));
+};
+const showToast = (msg, timeout=2200) => {
+  const t = document.getElementById('toast');
+  t.innerText = msg;
+  t.classList.add('show');
+  clearTimeout(t._tt);
+  t._tt = setTimeout(()=> t.classList.remove('show'), timeout);
+};
+const showLoader = (el, show=true) => {
+  if (show) {
+    if (!el.querySelector('.loader')) {
+      const sp = document.createElement('span'); sp.className='loader'; el.appendChild(sp);
+    }
+  } else {
+    const sp = el.querySelector('.loader'); if (sp) sp.remove();
+  }
+};
+
+/* ====== LocalStorage keys and data functions ====== */
+const KEY_APORTES = 'invest_port_aportes_v1';
+const KEY_VALORES = 'invest_port_valores_v1';
+
+function readAportes(){ return JSON.parse(localStorage.getItem(KEY_APORTES) || '[]'); }
+function readValores(){ return JSON.parse(localStorage.getItem(KEY_VALORES) || '[]'); }
+function saveAportes(a){ localStorage.setItem(KEY_APORTES, JSON.stringify(a)); }
+function saveValores(v){ localStorage.setItem(KEY_VALORES, JSON.stringify(v)); }
+
+/* ====== Core: add/edit/delete ====== */
+function addAporte(obj){
+  const arr = readAportes();
+  arr.push(obj);
+  saveAportes(arr);
+  renderAll();
+  showToast('Aporte salvo');
+}
+function addValor(obj){
+  const arr = readValores();
+  arr.push(obj);
+  saveValores(arr);
+  renderAll();
+  showToast('Valor salvo');
+}
+function deleteAporte(i){
+  const arr = readAportes();
+  arr.splice(i,1);
+  saveAportes(arr);
+  renderAll();
+  showToast('Aporte excluído');
+}
+function deleteValor(i){
+  const arr = readValores();
+  arr.splice(i,1);
+  saveValores(arr);
+  renderAll();
+  showToast('Registro excluído');
+}
+
+/* ====== Numeric solver: encontra taxa diária r que satisfaz FV = sum(ai*(1+r)^(dias_end - dias_i))
+   Usa busca binária em r entre -0.999999 e 10 (1.0000 = 100% diária alta). */
+function estimateDailyRate(aportes, valores){
+  if (!aportes.length || !valores.length) return null;
+  // ordenar por data
+  const aSorted = aportes.slice().sort((p,q)=> new Date(p.data) - new Date(q.data));
+  const vSorted = valores.slice().sort((p,q)=> new Date(p.data) - new Date(q.data));
+  const endDate = new Date(vSorted[vSorted.length-1].data);
+  const FV = vSorted[vSorted.length-1].valor;
+  const ts = aSorted.map(a=> {
+    return {
+      valor: a.valor,
+      dias: Math.round((endDate - new Date(a.data)) / (1000*3600*24))
+    };
+  });
+
+  // if total aportado is 0, return null
+  const totalInvested = ts.reduce((s,x)=> s + x.valor, 0);
+  if (totalInvested === 0) return null;
+
+  // function f(r) = sum(ai*(1+r)^{dias_i}) - FV
+  function f(r){
+    // if r <= -1 then (1+r)^n issues; but handle near -1
+    if (r <= -0.9999999) return Number.POSITIVE_INFINITY;
+    let s = 0;
+    for (const t of ts) {
+      s += t.valor * Math.pow(1 + r, Math.max(0, t.dias));
+    }
+    return s - FV;
+  }
+  // choose bracket
+  let low = -0.999999; let high = 1.0; // start with 100% daily upper
+  // expand high until f(high) > 0 or iterations
+  for (let i=0;i<80;i++){
+    const val = f(high);
+    if (Math.abs(val) < 1e-6) return high;
+    // goal: find r where f(r) ~ 0. If f(high) < 0, need larger high (FV bigger than compounded sum => increase r)
+    if (f(high) < 0) high *= 2;
+    else break;
+  }
+  // binary search
+  let mid; let fmid;
+  for (let iter=0; iter<80; iter++){
+    mid = (low + high) / 2;
+    fmid = f(mid);
+    if (Math.abs(fmid) < 1e-8) break;
+    // decide side
+    const flow = f(low);
+    if ((flow < 0 && fmid > 0) || (flow > 0 && fmid < 0)) {
+      high = mid;
+    } else {
+      low = mid;
+    }
+  }
+  return mid;
+}
+
+/* ====== Rendering & calculations ====== */
+let chartInstance = null;
+function renderAll(filters){
+  // read data
+  const aportesRaw = readAportes();
+  const valoresRaw = readValores();
+
+  // apply filters if provided
+  let aportes = aportesRaw.slice();
+  let valores = valoresRaw.slice();
+  if (filters){
+    const {start,end,min,max,search} = filters;
+    if (start) aportes = aportes.filter(a=> new Date(a.data) >= new Date(start));
+    if (end) aportes = aportes.filter(a=> new Date(a.data) <= new Date(end));
+    if (min !== null) aportes = aportes.filter(a=> a.valor >= min);
+    if (max !== null) aportes = aportes.filter(a=> a.valor <= max);
+    if (search) {
+      const q = search.toLowerCase();
+      aportes = aportes.filter(a=> a.investimento.toLowerCase().includes(q));
+      valores = valores.filter(v=> v.investimento.toLowerCase().includes(q));
+    }
+  }
+
+  // populate tables
+  const tbodyA = document.querySelector('#tableAportes tbody'); tbodyA.innerHTML = '';
+  aportes.forEach((a, idx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${a.investimento}</td><td>${formatDateBR(a.data)}</td><td>${currencyFmt(a.valor)}</td>
+      <td class="actions">
+        <button class="btn-muted" data-i="${idx}" data-type="detail-aporte">Detalhe</button>
+        <button class="btn-danger" data-i="${idx}" data-type="del-aporte">Excluir</button>
+      </td>`;
+    tbodyA.appendChild(tr);
+  });
+
+  const tbodyV = document.querySelector('#tableValores tbody'); tbodyV.innerHTML = '';
+  valores.forEach((v, idx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${v.investimento}</td><td>${formatDateBR(v.data)}</td><td>${currencyFmt(v.valor)}</td>
+      <td class="actions">
+        <button class="btn-muted" data-i="${idx}" data-type="detail-valor">Detalhe</button>
+        <button class="btn-danger" data-i="${idx}" data-type="del-valor">Excluir</button>
+      </td>`;
+    tbodyV.appendChild(tr);
+  });
+
+  // Calculate KPIs using full arrays (not filtered) for accuracy
+  const allAportes = aportesRaw.slice().sort((p,q)=> new Date(p.data)-new Date(q.data));
+  const allValores = valoresRaw.slice().sort((p,q)=> new Date(p.data)-new Date(q.data));
+  const totalAportado = allAportes.reduce((s,a)=> s + a.valor, 0);
+  const ultimoValor = allValores.length ? allValores[allValores.length-1].valor : 0;
+  const firstDate = allAportes.length ? new Date(allAportes[0].data) : null;
+  const lastDate = allValores.length ? new Date(allValores[allValores.length-1].data) : null;
+  const dias = (firstDate && lastDate) ? Math.max(1, Math.round((lastDate - firstDate)/(1000*3600*24))) : 0;
+
+  let rentTotal = 0; let dailyRate = null;
+  if (totalAportado > 0 && ultimoValor > 0 && dias>0){
+    rentTotal = (ultimoValor/totalAportado - 1) * 100;
+    dailyRate = estimateDailyRate(allAportes, allValores);
+  }
+
+  // populate KPIs
+  document.getElementById('kpi-capital').innerText = currencyFmt(totalAportado);
+  document.getElementById('kpi-valor').innerText = currencyFmt(ultimoValor);
+  document.getElementById('kpi-rent').innerText = isFinite(rentTotal) ? rentTotal.toFixed(2) + '%' : '0,00%';
+  if (dailyRate !== null && isFinite(dailyRate)){
+    const annual = (Math.pow(1+dailyRate, 365)-1)*100;
+    document.getElementById('kpi-annual').innerText = annual.toFixed(2) + '%';
+    document.getElementById('dailyRate').innerText = (dailyRate*100).toFixed(4) + '%';
+  } else {
+    document.getElementById('kpi-annual').innerText = '—';
+    document.getElementById('dailyRate').innerText = '—';
+  }
+  document.getElementById('daysSince').innerText = dias;
+  document.getElementById('lastUpdate').innerText = lastDate ? formatDateBR(lastDate.toISOString().slice(0,10)) : '—';
+
+  // Chart: use valoresRaw (full history) filtered by search if provided
+  const chartData = valoresRaw.slice().sort((p,q)=> new Date(p.data)-new Date(q.data));
+  const labels = chartData.map(x => formatDateBR(x.data));
+  const dataPoints = chartData.map(x => x.valor);
+
+  if (chartInstance) chartInstance.destroy();
+  const ctx = document.getElementById('chartCanvas').getContext('2d');
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets:[{
+        label: 'Valor do portfólio (R$)',
+        data: dataPoints,
+        borderWidth: 2,
+        fill: false,
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:true}},
+      scales:{
+        y:{ticks:{callback:val => currencyFmt(val)}}
+      }
+    }
+  });
+}
+
+/* ====== Event wiring ====== */
+document.getElementById('btnSalvarAporte').addEventListener('click', ()=>{
+  const inv = document.getElementById('inpInvestimento').value.trim();
+  const data = document.getElementById('inpDataAporte').value;
+  const valor = parseNumber(document.getElementById('inpValorAporte').value || '');
+  if (!inv || !data || isNaN(valor)){ showToast('Preencha investimento, data e valor válidos'); return; }
+  addAporte({investimento:inv, data, valor});
+  // clear
+  document.getElementById('inpValorAporte').value = '';
+  document.getElementById('inpDataAporte').value = '';
+});
+
+document.getElementById('btnSalvarValor').addEventListener('click', ()=>{
+  const inv = document.getElementById('inpInvestimentoAtual').value.trim();
+  const data = document.getElementById('inpDataAtual').value;
+  const valor = parseNumber(document.getElementById('inpValorAtual').value || '');
+  if (!inv || !data || isNaN(valor)){ showToast('Preencha investimento, data e valor válidos'); return; }
+  addValor({investimento:inv, data, valor});
+  document.getElementById('inpValorAtual').value = '';
+  document.getElementById('inpDataAtual').value = '';
+});
+
+// table delegated clicks for detail/delete
+document.addEventListener('click', (e)=>{
+  const t = e.target.closest('button');
+  if (!t) return;
+  const type = t.dataset.type;
+  const i = t.dataset.i ? Number(t.dataset.i) : null;
+  if (type === 'del-aporte') {
+    // confirm
+    if (confirm('Excluir este aporte?')) {
+      // map index back to full array index: because render may be filtered, we recompute by matching
+      // we'll find matching by position in displayed table (simple approach)
+      const tbody = Array.from(document.querySelectorAll('#tableAportes tbody tr'));
+      const rows = tbody;
+      const realIdx = i;
+      // delete in readAportes sorted similarly
+      deleteAporte(realIdx);
+    }
+  } else if (type === 'del-valor') {
+    if (confirm('Excluir este checkpoint?')) {
+      deleteValor(i);
+    }
+  } else if (type === 'detail-aporte') {
+    openModalFor('aporte', i);
+  } else if (type === 'detail-valor') {
+    openModalFor('valor', i);
+  }
+});
+
+/* ====== Modal logic (edit) ====== */
+const modalBackdrop = document.getElementById('modalBackdrop');
+const modalContent = document.getElementById('modalContent');
+let modalContext = null;
+function openModalFor(kind, index){
+  modalContext = {kind, index};
+  const arr = (kind === 'aporte') ? readAportes() : readValores();
+  const obj = arr[index];
+  modalContent.innerHTML = `
+    <div class="form-row"><label>Investimento</label><input id="m_invest" type="text" value="${obj.investimento}"></div>
+    <div class="form-row"><label>Data</label><input id="m_data" type="date" value="${obj.data}"></div>
+    <div class="form-row"><label>Valor</label><input id="m_valor" type="text" value="${obj.valor.toFixed(2).replace('.',',')}"></div>
+  `;
+  modalBackdrop.style.display = 'flex';
+}
+document.getElementById('modalClose').addEventListener('click', ()=> modalBackdrop.style.display='none');
+document.getElementById('modalDelete').addEventListener('click', ()=>{
+  if (!modalContext) return;
+  if (!confirm('Confirma exclusão?')) return;
+  if (modalContext.kind === 'aporte') deleteAporte(modalContext.index);
+  else deleteValor(modalContext.index);
+  modalBackdrop.style.display = 'none';
+});
+document.getElementById('modalSave').addEventListener('click', ()=>{
+  if (!modalContext) return;
+  const inv = document.getElementById('m_invest').value.trim();
+  const data = document.getElementById('m_data').value;
+  const valor = parseNumber(document.getElementById('m_valor').value || '');
+  if (!inv || !data || isNaN(valor)){ showToast('Preencha campos válidos'); return; }
+  if (modalContext.kind === 'aporte'){
+    const arr = readAportes();
+    arr[modalContext.index] = {investimento:inv, data, valor};
+    saveAportes(arr);
+  } else {
+    const arr = readValores();
+    arr[modalContext.index] = {investimento:inv, data, valor};
+    saveValores(arr);
+  }
+  modalBackdrop.style.display = 'none';
+  renderAll();
+  showToast('Alteração salva');
+});
+
+/* ====== Filters & export ====== */
+document.getElementById('applyFilters').addEventListener('click', ()=>{
+  const start = document.getElementById('filterStart').value || null;
+  const end = document.getElementById('filterEnd').value || null;
+  const min = parseNumber(document.getElementById('filterMin').value || '') || null;
+  const max = parseNumber(document.getElementById('filterMax').value || '') || null;
+  const search = document.getElementById('filterSearch').value.trim() || null;
+  renderAll({start,end,min,max,search});
+});
+document.getElementById('clearFilters').addEventListener('click', ()=>{
+  document.getElementById('filterStart').value = '';
+  document.getElementById('filterEnd').value = '';
+  document.getElementById('filterMin').value = '';
+  document.getElementById('filterMax').value = '';
+  document.getElementById('filterSearch').value = '';
+  renderAll();
+});
+
+// Export CSV (aportes + valores)
+document.getElementById('exportCsvBtn').addEventListener('click', ()=>{
+  const aportes = readAportes();
+  const valores = readValores();
+  let csv = 'Tipo,Investimento,Data,Valor\n';
+  aportes.forEach(a => { csv += `Aporte,${a.investimento},${a.data},${a.valor}\n`;});
+  valores.forEach(v => { csv += `Checkpoint,${v.investimento},${v.data},${v.valor}\n`;});
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'portfolio_export.csv'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+// Export PNG (screenshot dashboard)
+document.getElementById('exportPngBtn').addEventListener('click', ()=>{
+  const node = document.querySelector('.container');
+  showToast('Gerando imagem...');
+  html2canvas(node, {scale:1.4}).then(canvas => {
+    const link = document.createElement('a');
+    link.download = 'portfolio_dashboard.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast('PNG gerado');
+  }).catch(()=> showToast('Erro ao gerar PNG'));
+});
+
+/* ====== Simulation ====== */
+document.getElementById('btnSimular').addEventListener('click', ()=>{
+  const monthly = parseNumber(document.getElementById('simMonthly').value || '');
+  const months = Number(document.getElementById('simMonths').value || 0);
+  const invest = document.getElementById('simInvest').value.trim();
+  if (isNaN(monthly) || monthly <= 0 || months <= 0 || !invest) { showToast('Preencha aporte mensal e meses válidos'); return; }
+  // use estimated daily rate from full data for this investment
+  const aportes = readAportes().filter(a=> a.investimento === invest);
+  const valores = readValores().filter(v=> v.investimento === invest);
+  const daily = estimateDailyRate(aportes, valores) || 0;
+  // convert daily to monthly factor (approx 30 days)
+  const monthlyFactor = Math.pow(1 + daily, 30) - 1;
+  // simulate: start from last checkpoint value or sum(aportes)
+  const lastVal = valores.length ? valores.slice().sort((a,b)=>new Date(b.data)-new Date(a.data))[0].valor : aportes.reduce((s,x)=>s+x.valor,0);
+  let balance = lastVal;
+  for (let m=0;m<months;m++){
+    // add monthly aporte at beginning of month
+    balance += monthly;
+    // apply monthly return
+    balance *= (1 + monthlyFactor);
+  }
+  document.getElementById('simResult').innerText = `Saldo estimado em ${months} meses: ${currencyFmt(balance)} (taxa mensal média usada: ${(monthlyFactor*100).toFixed(2)}%)`;
+});
+
+/* ====== Clear all data (danger) ====== */
+document.getElementById('clearAll').addEventListener('click', ()=>{
+  if (!confirm('Apagar todos os dados do portfólio? Esta ação não pode ser desfeita.')) return;
+  localStorage.removeItem(KEY_APORTES);
+  localStorage.removeItem(KEY_VALORES);
+  renderAll();
+  showToast('Dados apagados');
+});
+
+/* ====== Init: seed if empty (optional) ====== */
+(function initSeed(){
+  // if empty, create example data for user convenience
+  if (!localStorage.getItem(KEY_APORTES) && !localStorage.getItem(KEY_VALORES)){
+    const today = new Date();
+    const iso = (d,offset=0) => {
+      const dt = new Date(d.getFullYear(), d.getMonth(), d.getDate()+offset);
+      return dt.toISOString().slice(0,10);
+    };
+    const seedA = [
+      {investimento:'Lighthouse', data: iso(new Date(), -120), valor: 1000},
+      {investimento:'Lighthouse', data: iso(new Date(), -90), valor: 500},
+      {investimento:'Lighthouse', data: iso(new Date(), -30), valor: 800},
+    ];
+    const seedV = [
+      {investimento:'Lighthouse', data: iso(new Date(), -100), valor: 1600},
+      {investimento:'Lighthouse', data: iso(new Date(), -10), valor: 2500},
+    ];
+    saveAportes(seedA);
+    saveValores(seedV);
+  }
+})();
+
+/* ====== initial render ====== */
+renderAll();
+</script>
+</body>
+</html>

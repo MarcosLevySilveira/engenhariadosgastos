@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gastos por Categoria e Mês</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Gastos por Categoria e Mês</h1>
+  </header>
+    <nav>
+    <a href="index.html">Tabela de Gastos</a>
+        <a href="cadastro.html">Cadastrar Despesa/Entrada</a>
+        <a href="debts.html">Dívidas</a>
+        <a href="monthlyExpenses.html">Gastos Mensais</a>
+        <a href="dre.html">Despesas e receitas</a>
+        <a href="burnporsemana.html">Burn por semana</a>
+        <a href="exportpdf.html">Exportar PDF</a>
+        <a href="game.html">InvestGame</a>
+        <a href="portfolio.html">Portfolio</a>
+    </nav>
+  <main>
+    <table>
+      <thead id="cabecalho-tabela"></thead>
+      <tbody id="corpo-tabela"></tbody>
+      <tfoot id="rodape-tabela"></tfoot>
+    </table>
+  </main>
+
+  <script>
+    function carregarDespesas() {
+      return JSON.parse(localStorage.getItem("despesas")) || [];
+    }
+
+    function agruparDespesasPorCategoriaEMes(despesas) {
+  const dados = {};
+  const mesesSet = new Set();
+
+  despesas.forEach(d => {
+    if (d.tipo !== "Saída") return;
+
+    const data = new Date(d.data);
+    // Pega mês no formato ISO yyyy-mm, para ordenar cronologicamente
+    const mes = data.toISOString().slice(0,7); // "2025-05"
+    mesesSet.add(mes);
+
+    if (!dados[d.categoria]) dados[d.categoria] = {};
+    if (!dados[d.categoria][mes]) dados[d.categoria][mes] = 0;
+
+    dados[d.categoria][mes] += d.valor;
+  });
+
+  const mesesOrdenados = Array.from(mesesSet).sort(); // ordena corretamente yyyy-mm
+  return { dados, meses: mesesOrdenados };
+}
+
+  function montarTabela({ dados, meses }) {
+  const cabecalho = document.getElementById("cabecalho-tabela");
+  const corpo = document.getElementById("corpo-tabela");
+  const rodape = document.getElementById("rodape-tabela");
+
+  // Formata os meses para 'Jan/25', 'Fev/25', etc.
+  const mesesFormatados = meses.map(m => {
+    const [ano, mes] = m.split("-");
+    const data = new Date(ano, mes - 1);
+    return data.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
+  });
+
+  // Cabeçalho
+  const trCabecalho = document.createElement("tr");
+  trCabecalho.innerHTML = `<th>Categoria</th>` + mesesFormatados.map(m => `<th>${m}</th>`).join("") + `<th>Total</th>`;
+  cabecalho.appendChild(trCabecalho);
+
+  // Organiza categorias com total
+  const categoriasOrdenadas = Object.entries(dados)
+    .map(([categoria, valoresPorMes]) => {
+      const total = meses.reduce((soma, mes) => soma + (valoresPorMes[mes] || 0), 0);
+      return { categoria, valoresPorMes, total };
+    })
+    .sort((a, b) => b.total - a.total); // Ordenar do maior para o menor
+
+  // Inicializa totais por mês
+  const totaisPorMes = Array(meses.length).fill(0);
+
+  // Corpo da tabela
+  categoriasOrdenadas.forEach(({ categoria, valoresPorMes, total }) => {
+    const tr = document.createElement("tr");
+    const colunas = meses.map((m, i) => {
+      const valor = valoresPorMes[m] || 0;
+      totaisPorMes[i] += valor;
+      return `<td>R$ ${valor.toFixed(2)}</td>`;
+    });
+    tr.innerHTML = `<td>${categoria}</td>` + colunas.join("") + `<td><strong>R$ ${total.toFixed(2)}</strong></td>`;
+    corpo.appendChild(tr);
+  });
+
+  // Rodapé
+  const trRodape = document.createElement("tr");
+  trRodape.innerHTML = `<td><strong>Total por mês</strong></td>` +
+    totaisPorMes.map(v => `<td><strong>R$ ${v.toFixed(2)}</strong></td>`).join("") +
+    `<td></td>`;
+  rodape.appendChild(trRodape);
+}
+
+    window.onload = () => {
+      const despesas = carregarDespesas();
+      const agrupado = agruparDespesasPorCategoriaEMes(despesas);
+      montarTabela(agrupado);
+    }
+  </script>
+</body>
+</html>

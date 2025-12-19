@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Controle de Dívidas</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1"></script>
+    <link rel="stylesheet" href="debts.css">
+</head>
+
+<body>
+     <nav>
+    <a href="index.html">Tabela de Gastos</a>
+        <a href="cadastro.html">Cadastrar Despesa/Entrada</a>
+        <a href="debts.html">Dívidas</a>
+        <a href="monthlyExpenses.html">Gastos Mensais</a>
+        <a href="dre.html">Despesas e receitas</a>
+        <a href="burnporsemana.html">Burn por semana</a>
+        <a href="exportpdf.html">Exportar PDF</a>
+        <a href="game.html">InvestGame</a>
+        <a href="portfolio.html">Portfolio</a>
+    </nav>
+    <h1>Controle de Dívidas</h1>
+
+    <!-- Formulário para adicionar nova dívida -->
+    <div class="form-section">
+        <h2>Adicionar Dívida</h2>
+        <input type="text" id="descricao" placeholder="Descrição">
+        <input type="number" id="valorTotal" placeholder="Valor total (R$)">
+        <button onclick="adicionarDivida()">Adicionar</button>
+    </div>
+
+    <!-- Formulário para registrar pagamento -->
+    <div class="form-section">
+        <h2>Registrar Pagamento</h2>
+        <select id="selectDivida"></select>
+        <input type="number" id="valorPago" placeholder="Valor pago (R$)">
+        <input type="date" id="dataPagamento">
+        <button onclick="registrarPagamento()">Registrar</button>
+    </div>
+
+    <!-- Tabela das dívidas -->
+    <h2>Dívidas</h2>
+    <div id="listaDividas"></div>
+
+    <!-- Gráfico de evolução -->
+    <h2>Evolução dos Pagamentos</h2>
+    <canvas id="graficoEvolucao" width="800" height="400"></canvas>
+
+    <script>
+        let dividas = JSON.parse(localStorage.getItem('dividas')) || [];
+
+        function salvar() {
+            localStorage.setItem('dividas', JSON.stringify(dividas));
+        }
+
+        function adicionarDivida() {
+            const descricao = document.getElementById("descricao").value;
+            const valor = parseFloat(document.getElementById("valorTotal").value);
+            if (!descricao || isNaN(valor)) return alert("Preencha corretamente.");
+
+            dividas.push({
+                id: Date.now(),
+                descricao,
+                valorTotal: valor,
+                pagamentos: []
+            });
+
+            salvar();
+            atualizarInterface();
+        }
+
+        function registrarPagamento() {
+            const id = parseInt(document.getElementById("selectDivida").value);
+            const valor = parseFloat(document.getElementById("valorPago").value);
+            if (!id || isNaN(valor) || valor <= 0) return alert("Preencha corretamente.");
+
+            const divida = dividas.find(d => d.id === id);
+            const data = document.getElementById("dataPagamento").value;
+            if (!data) return alert("Insira a data do pagamento.");
+            divida.pagamentos.push({ id: Date.now(), valor, data });
+
+            salvar();
+            atualizarInterface();
+        }
+
+        function deletarPagamento(idDivida, idPagamento) {
+            const divida = dividas.find(d => d.id === idDivida);
+            divida.pagamentos = divida.pagamentos.filter(p => p.id !== idPagamento);
+            salvar();
+            atualizarInterface();
+        }
+
+        function atualizarInterface() {
+            const lista = document.getElementById("listaDividas");
+            const select = document.getElementById("selectDivida");
+            lista.innerHTML = "";
+            select.innerHTML = "";
+
+            dividas.forEach(divida => {
+                const totalPago = divida.pagamentos.reduce((s, p) => s + p.valor, 0);
+                const restante = divida.valorTotal - totalPago;
+
+                // Criar div com informações
+                const container = document.createElement("div");
+                container.innerHTML = `
+          <h3>${divida.descricao}</h3>
+          <p>Total: R$ ${divida.valorTotal.toFixed(2)} | Pago: R$ ${totalPago.toFixed(2)} | Restante: R$ ${restante.toFixed(2)}</p>
+        `;
+
+                // Lista de pagamentos
+                const pagamentosDiv = document.createElement("div");
+                pagamentosDiv.classList.add("pagamentos");
+
+                divida.pagamentos.forEach(pagamento => {
+                    const item = document.createElement("div");
+                    item.classList.add("pagamento-item");
+                    item.innerHTML = `
+            <span>${pagamento.data} - R$ ${pagamento.valor.toFixed(2)}</span>
+            <button onclick="deletarPagamento(${divida.id}, ${pagamento.id})">🗑️</button>
+          `;
+                    pagamentosDiv.appendChild(item);
+                });
+
+                container.appendChild(pagamentosDiv);
+                lista.appendChild(container);
+
+                // Adicionar ao select
+                const opt = document.createElement("option");
+                opt.value = divida.id;
+                opt.textContent = divida.descricao;
+                select.appendChild(opt);
+            });
+
+            desenharGrafico();
+        }
+
+        function desenharGrafico() {
+            const ctx = document.getElementById("graficoEvolucao").getContext("2d");
+
+            const datasets = dividas.map(divida => {
+                let acumulado = 0;
+                const dados = divida.pagamentos
+                    .sort((a, b) => new Date(a.data) - new Date(b.data))
+                    .map(p => {
+                        acumulado += p.valor;
+                        return { x: p.data, y: acumulado };
+                    });
+
+                return {
+                    label: divida.descricao,
+                    data: dados,
+                    borderColor: getCorAleatoria(),
+                    fill: false
+                };
+            });
+
+            if (window.grafico) window.grafico.destroy();
+
+            window.grafico = new Chart(ctx, {
+                type: "line",
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { unit: 'week' },
+                            title: { display: true, text: "Data" }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: "Valor Acumulado (R$)" }
+                        }
+                    }
+                }
+            });
+        }
+
+        function getCorAleatoria() {
+            return '#' + Math.floor(Math.random() * 16777215).toString(16);
+        }
+
+        atualizarInterface();
+    </script>
+</body>
+
+</html>

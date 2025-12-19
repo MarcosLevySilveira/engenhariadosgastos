@@ -1,0 +1,223 @@
+/* Reset some basic styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* General styles for body */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* Header styles */
+header {
+    background-color: #4CAF50;
+    color: white;
+    text-align: center;
+    padding: 10px 0;
+}
+
+h1 {
+    font-size: 2.5em;
+}
+
+
+/* Navigation styles */
+nav {
+    background-color: #333;
+    padding: 10px;
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+    margin: 0 15px;
+    font-size: 1.1em;
+}
+
+nav a:hover {
+    background-color: #575757;
+    padding: 5px;
+    border-radius: 5px;
+}
+
+/* Main section styles */
+main {
+    margin: 20px;
+}
+
+/* Card styles for total values */
+.card-container {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+}
+
+.card {
+    background-color: white;
+    border-radius: 10px;
+    padding: 20px;
+    width: 30%;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.card h3 {
+    margin-bottom: 10px;
+    color: #555;
+}
+
+.card p {
+    font-size: 1.5em;
+    color: #333;
+}
+
+.card-entrada {
+    background-color: #d4f7d4;
+}
+
+.card-saida {
+    background-color: #f7d4d4;
+}
+
+.card-categorias {
+    background-color: #d4e8f7;
+}
+
+/* Table styles */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+table th, table td {
+    padding: 10px;
+    text-align: left;
+    border: 1px solid #ddd;
+}
+
+table th {
+    background-color: #4CAF50;
+    color: white;
+}
+
+table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+table tr:hover {
+    background-color: #f1f1f1;
+}
+
+table td button {
+    padding: 5px 10px;
+    margin: 2px;
+    border: none;
+    background-color: #4CAF50;
+    color: white;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+table td button:hover {
+    background-color: #45a049;
+}
+
+/* Button styles for new registration */
+.btn-cadastrar {
+    display: inline-block;
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    font-size: 1.2em;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 20px;
+    text-align: center;
+    text-decoration: none;
+}
+
+.btn-cadastrar:hover {
+    background-color: #45a049;
+}
+
+/* Styles for category cards */
+#cards-categorias {
+    display: flex;
+    flex-wrap: wrap; /* Permite quebrar a linha */
+    justify-content: space-between; /* Espaço igual entre os cards */
+    gap: 10px; /* Espaçamento entre os cards */
+    margin-top: 20px;
+}
+
+#cards-categorias .card {
+    flex-basis: calc(10% - 10px); /* Garante que 10 cards caibam por linha */
+    min-width: 200px; /* Define um tamanho mínimo para os cards */
+    text-align: center;
+}
+
+/* Styles for chart */
+canvas {
+    max-width: 85%;
+    margin: 20px auto;
+}
+
+/* New styles for Entradas and Saídas */
+#cards-entradas, #cards-saidas {
+    display: flex;
+    flex-wrap: wrap; /* Permite quebrar a linha */
+    justify-content: space-between; /* Espaço igual entre os cards */
+    gap: 10px; /* Espaçamento entre os cards */
+    margin-top: 20px;
+}
+
+#cards-entradas .card, #cards-saidas .card {
+    flex-basis: calc(10% - 10px); /* Garante que os cards caibam de forma ajustada */
+    min-width: 200px; /* Tamanho mínimo dos cards */
+    text-align: center;
+}
+
+#cards-entradas h3, #cards-saidas h3 {
+    font-size: 1.5em;
+    color: #333;
+    margin-bottom: 10px;
+    text-align: center;
+    font-weight: bold;
+}
+
+/* Responsive design adjustments */
+@media (max-width: 768px) {
+    .card-container {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .card {
+        width: 80%;
+        margin-bottom: 15px;
+    }
+
+    table td button {
+        font-size: 0.9em;
+        padding: 4px 8px;
+    }
+
+    #cards-categorias {
+        flex-direction: column;
+    }
+
+    #cards-categorias .card {
+        width: 80%;
+        margin-bottom: 15px;
+    }
+
+    .btn-cadastrar {
+        width: 100%;
+    }
+}

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Burn Rate Semanal</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<header>
+    <h1>Burn Rate Semanal</h1>
+</header>
+
+<nav>
+    <a href="index.html">Tabela de Gastos</a>
+        <a href="cadastro.html">Cadastrar Despesa/Entrada</a>
+        <a href="debts.html">Dívidas</a>
+        <a href="monthlyExpenses.html">Gastos Mensais</a>
+        <a href="dre.html">Despesas e receitas</a>
+        <a href="burnporsemana.html">Burn por semana</a>
+        <a href="exportpdf.html">Exportar PDF</a>
+        <a href="game.html">InvestGame</a>
+        <a href="portfolio.html">Portfolio</a>
+    </nav>
+
+<main>
+    <div class="filtro-datas">
+        <label for="data-inicio">Data início:</label>
+        <input type="date" id="data-inicio">
+        <label for="data-fim">Data fim:</label>
+        <input type="date" id="data-fim">
+        <button onclick="atualizarGrafico()">Filtrar</button>
+    </div>
+
+    <h2>Burn Rate Semanal (Entradas x Saídas)</h2>
+    <canvas id="graficoSemanal" width="1600" height="800"></canvas>
+</main>
+
+<script>
+function carregarDespesas() {
+    return JSON.parse(localStorage.getItem("despesas")) || [];
+}
+
+function getSemanaMes(dataStr) {
+    const data = new Date(dataStr);
+    const ano = data.getFullYear();
+    const primeiroDiaAno = new Date(ano, 0, 1);
+    const dias = Math.floor((data - primeiroDiaAno) / (24 * 60 * 60 * 1000));
+    const semana = Math.ceil((dias + primeiroDiaAno.getDay() + 1) / 7);
+    const meses = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+    const mes = meses[data.getMonth()];
+    return { semana: `W${semana}`, mes };
+}
+
+let chartSemanal;
+
+function atualizarGrafico() {
+    const despesas = carregarDespesas();
+    const dataInicio = document.getElementById("data-inicio").value;
+    const dataFim = document.getElementById("data-fim").value;
+
+    const somatorioSemanal = {};
+
+    const despesasFiltradas = despesas.filter(d => {
+        const data = new Date(d.data);
+        return (!dataInicio || data >= new Date(dataInicio)) &&
+               (!dataFim || data <= new Date(dataFim));
+    });
+
+    despesasFiltradas.forEach(d => {
+        const { semana, mes } = getSemanaMes(d.data);
+        const chave = `${semana} - ${mes}`;
+        somatorioSemanal[chave] = somatorioSemanal[chave] || { entrada: 0, saida: 0 };
+
+        if (d.tipo === "Entrada") somatorioSemanal[chave].entrada += d.valor;
+        else somatorioSemanal[chave].saida += d.valor;
+    });
+
+    const semanas = Object.keys(somatorioSemanal).sort((a,b) =>
+        parseInt(a.match(/\d+/)[0]) - parseInt(b.match(/\d+/)[0])
+    );
+
+    const entradas = semanas.map(w => somatorioSemanal[w].entrada);
+    const saidas = semanas.map(w => somatorioSemanal[w].saida);
+
+    let saldo = 0;
+    const saldoAcumulado = semanas.map(w => {
+        saldo += somatorioSemanal[w].entrada - somatorioSemanal[w].saida;
+        return saldo;
+    });
+
+    if (chartSemanal) chartSemanal.destroy();
+
+    chartSemanal = new Chart(
+        document.getElementById("graficoSemanal"),
+        {
+            type: 'bar',
+            data: {
+                labels: semanas,
+                datasets: [
+                    { label: 'Entradas (R$)', data: entradas, backgroundColor: 'green' },
+                    { label: 'Saídas (R$)', data: saidas, backgroundColor: 'red' },
+                    {
+                        label: 'Saldo Acumulado',
+                        data: saldoAcumulado,
+                        type: 'line',
+                        borderColor: 'blue',
+                        borderWidth: 2,
+                        tension: 0.3
+                    }
+                ]
+            },
+            options: { scales: { y: { beginAtZero: true } } }
+        }
+    );
+}
+
+window.onload = atualizarGrafico;
+</script>
+
+</body>
+</html>

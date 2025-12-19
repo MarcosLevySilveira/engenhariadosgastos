@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Finanças Pessoais</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Bibliotecas para exportar PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Controle de Finanças Pessoais</h1>
+    </header>
+
+    <nav>
+    <a href="index.html">Tabela de Gastos</a>
+        <a href="cadastro.html">Cadastrar Despesa/Entrada</a>
+        <a href="debts.html">Dívidas</a>
+        <a href="monthlyExpenses.html">Gastos Mensais</a>
+        <a href="dre.html">Despesas e receitas</a>
+        <a href="burnporsemana.html">Burn por semana</a>
+        <a href="exportpdf.html">Exportar PDF</a>
+        <a href="game.html">InvestGame</a>
+        <a href="portfolio.html">Portfolio</a>
+    </nav>
+
+    <main>
+        <h2>Entradas e Saídas</h2>
+        
+        <div class="filtro-datas">
+            <label for="data-inicio">Data início:</label>
+            <input type="date" id="data-inicio">
+            <label for="data-fim">Data fim:</label>
+            <input type="date" id="data-fim">
+            <button onclick="atualizarTabela()">Filtrar</button>
+            <button id="btnExportarPDF">📄 Exportar PDF</button>
+        </div>
+
+        <!-- 🔸 Agrupamento de todos os cards para exportação -->
+        <div id="area-dashboard">
+            <div id="dashboard-cards" class="card-container">
+                <div class="card card-entrada">
+                    <h3>Total Entradas</h3>
+                    <p id="total-entradas">0,00</p>
+                </div>
+                <div class="card card-saida">
+                    <h3>Total Saídas</h3>
+                    <p id="total-saidas">0,00</p>
+                </div>
+                <div class="card card-categorias">
+                    <h3>Total Geral</h3>
+                    <p id="total-categorias">0,00</p>
+                </div>
+            </div>
+            
+            <h2>Entradas</h2>
+            <div id="cards-entradas" class="card-container"></div>
+            
+            <h2>Saídas</h2>
+            <div id="cards-saidas" class="card-container"></div>
+        </div>
+        <!-- 🔸 Fim da área exportável -->
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Categoria</th>
+                    <th>Descrição</th>
+                    <th>Valor (R$)</th>
+                    <th>Tipo</th>
+                    <th>Saldo (R$)</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-dados"></tbody>
+        </table>
+
+        <canvas id="graficoEntradas" width="1600" height="800"></canvas>
+        <canvas id="graficoSaidas" width="1600" height="800"></canvas>
+    </main>
+
+    <script>
+        function carregarDespesas() {
+            return JSON.parse(localStorage.getItem("despesas")) || [];
+        }
+
+        function atualizarTabela() {
+            const despesas = carregarDespesas();
+            const tabela = document.getElementById("tabela-dados");
+            const dataInicio = document.getElementById("data-inicio").value;
+            const dataFim = document.getElementById("data-fim").value;
+            tabela.innerHTML = "";
+
+            let totalEntradas = 0;
+            let totalSaidas = 0;
+            const somatorioCategoriasEntrada = {};
+            const somatorioCategoriasSaida = {};
+            let saldoAcumulado = 0;
+
+            const despesasFiltradas = despesas.filter(despesa => {
+                const dataDespesa = new Date(despesa.data);
+                const inicio = dataInicio ? new Date(dataInicio) : null;
+                const fim = dataFim ? new Date(dataFim) : null;
+                return (!inicio || dataDespesa >= inicio) && (!fim || dataDespesa <= fim);
+            });
+
+            despesasFiltradas.forEach(despesa => {
+                const row = tabela.insertRow();
+                row.insertCell(0).textContent = despesa.data;
+                row.insertCell(1).textContent = despesa.categoria;
+                row.insertCell(2).textContent = despesa.descricao;
+                row.insertCell(3).textContent = despesa.valor.toFixed(2);
+                row.insertCell(4).textContent = despesa.tipo;
+
+                if (despesa.tipo === "Entrada") {
+                    totalEntradas += despesa.valor;
+                    saldoAcumulado += despesa.valor;
+                    somatorioCategoriasEntrada[despesa.categoria] = (somatorioCategoriasEntrada[despesa.categoria] || 0) + despesa.valor;
+                } else {
+                    totalSaidas += despesa.valor;
+                    saldoAcumulado -= despesa.valor;
+                    somatorioCategoriasSaida[despesa.categoria] = (somatorioCategoriasSaida[despesa.categoria] || 0) + despesa.valor;
+                }
+
+                row.insertCell(5).textContent = saldoAcumulado.toFixed(2);
+            });
+
+            document.getElementById("total-entradas").textContent = totalEntradas.toFixed(2);
+            document.getElementById("total-saidas").textContent = Math.abs(totalSaidas).toFixed(2);
+            document.getElementById("total-categorias").textContent = (totalEntradas - totalSaidas).toFixed(2);
+
+            const cardsEntradas = document.getElementById("cards-entradas");
+            const cardsSaidas = document.getElementById("cards-saidas");
+            cardsEntradas.innerHTML = "";
+            cardsSaidas.innerHTML = "";
+
+            Object.entries(somatorioCategoriasEntrada)
+                .sort(([,a],[,b]) => b-a)
+                .forEach(([categoria, valor]) => {
+                    const card = document.createElement("div");
+                    card.className = "card card-categorias";
+                    card.innerHTML = `<h3>${categoria}</h3><p>${valor.toFixed(2)}</p>`;
+                    cardsEntradas.appendChild(card);
+                });
+
+            Object.entries(somatorioCategoriasSaida)
+                .sort(([,a],[,b]) => b-a)
+                .forEach(([categoria, valor]) => {
+                    const card = document.createElement("div");
+                    card.className = "card card-categorias";
+                    card.innerHTML = `<h3>${categoria}</h3><p>${valor.toFixed(2)}</p>`;
+                    cardsSaidas.appendChild(card);
+                });
+
+            criarGraficoEntradas(somatorioCategoriasEntrada);
+            criarGraficoSaidas(somatorioCategoriasSaida);
+        }
+
+        function criarGraficoEntradas(categoriasEntrada) {
+            const ctx = document.getElementById("graficoEntradas").getContext("2d");
+            const categoriasOrdenadas = Object.entries(categoriasEntrada).sort(([,a],[,b]) => b - a);
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: categoriasOrdenadas.map(([c]) => c),
+                    datasets: [{
+                        label: 'Entradas (R$)',
+                        data: categoriasOrdenadas.map(([,v]) => v),
+                        backgroundColor: 'green',
+                        borderColor: 'black',
+                        borderWidth: 1
+                    }]
+                },
+                options: { scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        function criarGraficoSaidas(categoriasSaida) {
+            const ctx = document.getElementById("graficoSaidas").getContext("2d");
+            const categoriasOrdenadas = Object.entries(categoriasSaida).sort(([,a],[,b]) => b - a);
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: categoriasOrdenadas.map(([c]) => c),
+                    datasets: [{
+                        label: 'Saídas (R$)',
+                        data: categoriasOrdenadas.map(([,v]) => v),
+                        backgroundColor: 'red',
+                        borderColor: 'black',
+                        borderWidth: 1
+                    }]
+                },
+                options: { scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        // 🔹 Exportar todo o bloco de cards (totais + categorias)
+        document.getElementById("btnExportarPDF").addEventListener("click", async () => {
+            const { jsPDF } = window.jspdf;
+            const dashboard = document.getElementById("area-dashboard");
+
+            const canvas = await html2canvas(dashboard, { scale: 2 }); // melhor qualidade
+            const imgData = canvas.toDataURL("image/png");
+
+            const pdf = new jsPDF("p", "mm", "a4");
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const imgWidth = pageWidth - 20;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight);
+            pdf.save("Dashboard_Financeiro_Completo.pdf");
+        });
+
+        window.onload = atualizarTabela;
+    </script>
+</body>
+</html>
