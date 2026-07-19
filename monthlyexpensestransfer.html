@@ -43,7 +43,7 @@
   const mesesSet = new Set();
 
   despesas.forEach(d => {
-    if (d.tipo !== "Saída") return;
+    if (d.tipo !== "Transferência") return;
 
     const data = new Date(d.data);
     // Pega mês no formato ISO yyyy-mm, para ordenar cronologicamente

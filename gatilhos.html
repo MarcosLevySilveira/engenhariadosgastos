@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Inteligente</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 p-6">
+
+<h1 class="text-2xl font-bold mb-4">🧠 Dashboard Inteligente de Comportamento Financeiro</h1>
+
+<div class="flex gap-2 mb-6">
+<button onclick="setRange(7)" class="bg-blue-500 text-white px-3 py-1 rounded">7 dias</button>
+<button onclick="setRange(30)" class="bg-blue-500 text-white px-3 py-1 rounded">30 dias</button>
+<button onclick="setRange(90)" class="bg-blue-500 text-white px-3 py-1 rounded">90 dias</button>
+</div>
+
+<div id="cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+<script>
+let rangeDays = 30;
+
+function setRange(days){
+    rangeDays = days;
+    loadDashboard();
+}
+
+function loadDashboard(){
+    const data = JSON.parse(localStorage.getItem("despesas")) || [];
+
+    const now = new Date();
+    const filtered = data.filter(d => {
+        const date = new Date(d.data);
+        const diff = (now - date)/(1000*60*60*24);
+        return diff <= rangeDays && d.tipo === "Saída";
+    });
+
+    const cards = document.getElementById("cards");
+    cards.innerHTML = "";
+
+    if(filtered.length === 0){
+        cards.innerHTML = "<p>Nenhum dado</p>";
+        return;
+    }
+
+    const total = filtered.reduce((sum,d)=>sum+d.valor,0);
+
+    // =========================
+    // RESUMO
+    // =========================
+    cards.innerHTML += createCard("💰 Total gasto", `R$ ${total.toFixed(2)}`);
+
+    // =========================
+    // TOP GATILHOS GERAIS
+    // =========================
+    const gatilhos = {};
+    filtered.forEach(d => {
+        gatilhos[d.gatilho] = (gatilhos[d.gatilho] || 0) + d.valor;
+    });
+
+    const topGatilhos = Object.entries(gatilhos)
+        .sort((a,b)=>b[1]-a[1])
+        .slice(0,5);
+
+    cards.innerHTML += createListCard("🔥 Top Gatilhos", topGatilhos.map(i=>[i[0], `R$ ${i[1].toFixed(2)}`]));
+
+    // =========================
+    // PIOR GATILHO (RSG)
+    // =========================
+    const rsgMap = {};
+    filtered.forEach(d => {
+        if(!rsgMap[d.gatilho]) rsgMap[d.gatilho] = [];
+        rsgMap[d.gatilho].push(d.rsg);
+    });
+
+    const avgRsg = Object.entries(rsgMap).map(([g,vals])=>{
+        const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
+        return [g, avg];
+    }).sort((a,b)=>a[1]-b[1])[0];
+
+    if(avgRsg){
+        cards.innerHTML += createCard("⚠️ Pior Gatilho", `${avgRsg[0]} (RSG ${avgRsg[1].toFixed(1)})`);
+    }
+
+    // =========================
+    // HORÁRIO CRÍTICO
+    // =========================
+    const periodoMap = {};
+    filtered.forEach(d => {
+        periodoMap[d.periodo] = (periodoMap[d.periodo]||0)+d.valor;
+    });
+
+    const worstPeriodo = Object.entries(periodoMap).sort((a,b)=>b[1]-a[1])[0];
+
+    if(worstPeriodo){
+        cards.innerHTML += createCard("🕒 Horário crítico", `${worstPeriodo[0]} (R$ ${worstPeriodo[1].toFixed(0)})`);
+    }
+
+    // =========================
+    // GASTOS OCULTOS AVANÇADO
+    // =========================
+    const ocultos = filtered.filter(d => d.tipoGasto === "Pequeno impulso");
+    const totalOcultos = ocultos.reduce((sum,d)=>sum+d.valor,0);
+    const freqOcultos = ocultos.length;
+    const projecaoMensal = (totalOcultos / rangeDays) * 30;
+
+    cards.innerHTML += createCard("🧩 Gastos Ocultos",
+        `R$ ${totalOcultos.toFixed(2)} (${((totalOcultos/total)*100).toFixed(1)}%)<br>
+        Frequência: ${freqOcultos}x<br>
+        Projeção mensal: R$ ${projecaoMensal.toFixed(2)}`);
+
+    // =========================
+    // ONDE ACONTECEM OCULTOS
+    // =========================
+    const ocultosCat = {};
+    ocultos.forEach(d => {
+        ocultosCat[d.categoria] = (ocultosCat[d.categoria] || 0) + d.valor;
+    });
+
+    const topOcultos = Object.entries(ocultosCat)
+        .sort((a,b)=>b[1]-a[1])
+        .slice(0,5);
+
+    cards.innerHTML += createListCard("🎯 Onde os ocultos acontecem", topOcultos.map(i=>[i[0], `R$ ${i[1].toFixed(2)}`]));
+
+    // =========================
+    // SABOTADORES
+    // =========================
+    const gatilhoMap = {};
+    ocultos.forEach(d => {
+        if(!gatilhoMap[d.gatilho]) gatilhoMap[d.gatilho] = {valor:0, freq:0, rsg:[]};
+        gatilhoMap[d.gatilho].valor += d.valor;
+        gatilhoMap[d.gatilho].freq += 1;
+        gatilhoMap[d.gatilho].rsg.push(d.rsg);
+    });
+
+    const sabotadores = Object.entries(gatilhoMap).map(([g,v])=>{
+        const avgRsg = v.rsg.reduce((a,b)=>a+b,0)/v.rsg.length;
+        const score = v.valor * v.freq * (6-avgRsg);
+        return {gatilho:g, valor:v.valor, freq:v.freq, avgRsg, score};
+    }).sort((a,b)=>b.score-a.score).slice(0,5);
+
+    cards.innerHTML += createListCard("💣 Top Sabotadores",
+        sabotadores.map(s=>[
+            s.gatilho,
+            `R$ ${s.valor.toFixed(0)} | ${s.freq}x | RSG ${s.avgRsg.toFixed(1)}`
+        ])
+    );
+
+    // =========================
+    // CORTE POTENCIAL
+    // =========================
+    const top2 = sabotadores.slice(0,2);
+    const corte = top2.reduce((sum,s)=>sum+s.valor,0);
+
+    cards.innerHTML += createCard("✂️ Corte potencial",
+        `Top 2 gatilhos:<br>
+         Economia: R$ ${corte.toFixed(2)}<br>
+         ≈ R$ ${(corte/rangeDays*30).toFixed(2)}/mês`);
+
+    // =========================
+    // PADRÃO
+    // =========================
+    const combo = {};
+    ocultos.forEach(d=>{
+        const key = `${d.periodo} → ${d.gatilho}`;
+        combo[key] = (combo[key]||0)+1;
+    });
+
+    const padrao = Object.entries(combo).sort((a,b)=>b[1]-a[1])[0];
+
+    if(padrao){
+        cards.innerHTML += createCard("🔁 Padrão dominante",
+            `${padrao[0]} (${padrao[1]}x)`);
+    }
+
+    // =========================
+    // ALERTAS
+    // =========================
+    let alerta = "";
+
+    if(freqOcultos > 10) alerta += "Alta frequência de impulsos. ";
+    if(totalOcultos/total > 0.3) alerta += "Impacto financeiro relevante. ";
+    if(projecaoMensal > 300) alerta += "Custo mensal elevado. ";
+
+    cards.innerHTML += createCard("🚨 Alertas", alerta || "Sem alertas críticos");
+
+    // =========================
+    // SCORE
+    // =========================
+    const planejados = filtered.filter(d=>d.tipoGasto === "Planejado").length;
+    const score = Math.max(0, Math.min(100,
+        (planejados/filtered.length)*50 +
+        (1 - totalOcultos/total)*50
+    ));
+
+    cards.innerHTML += createCard("🎯 Score de controle", `${score.toFixed(0)}/100`);
+
+    // =========================
+    // INSIGHT FINAL
+    // =========================
+    let insight = "";
+
+    if(totalOcultos/total > 0.25) insight += "Você está perdendo dinheiro em impulsos. ";
+    if(avgRsg && avgRsg[1] < 3) insight += `Gatilho crítico: ${avgRsg[0]}. `;
+    if(worstPeriodo && worstPeriodo[0] === "Noite") insight += "Noite é seu ponto fraco. ";
+
+    cards.innerHTML += createCard("🧠 Insight", insight || "Comportamento equilibrado");
+}
+
+function createCard(title, value){
+    return `
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="font-bold">${title}</h2>
+        <p class="text-sm mt-2">${value}</p>
+    </div>`;
+}
+
+function createListCard(title, items){
+    return `
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="font-bold">${title}</h2>
+        <ul class="mt-2 text-sm">
+            ${items.map(i=>`<li>${i[0]} - ${i[1]}</li>`).join("")}
+        </ul>
+    </div>`;
+}
+
+loadDashboard();
+</script>
+
+</body>
+</html>

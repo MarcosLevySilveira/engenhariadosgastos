@@ -171,14 +171,17 @@
 
     <nav>
         <a href="index.html">Tabela de Gastos</a>
-        <a href="cadastro.html" class="active">Cadastrar Despesa/Entrada</a>
+        <a href="cadastro4.html" class="active">Cadastrar Despesa/Entrada</a>
         <a href="debts.html">Dívidas</a>
         <a href="monthlyExpenses.html">Gastos Mensais</a>
+        <a href="monthlyexpensestransfer.html">Transferências Mensais</a>
+        <a href="mastermonthly.html">Gastos Macro</a>
+        <a href="mastermonthlytransfer.html">Transferências Macro</a>
         <a href="dre.html">Despesas e receitas</a>
         <a href="burnporsemana.html">Burn por semana</a>
         <a href="exportpdf.html">Exportar PDF</a>
-        <a href="game.html">InvestGame</a>
         <a href="portfolio.html">Portfolio</a>
+
     </nav>
 
     <main>
@@ -197,8 +200,10 @@
                 <option value="Moradia">Moradia</option>
                 <option value="Transporte">Transporte</option>
                 <option value="Alimentação">Alimentação</option>
+                <option value="Despesas de Viagem a Trabalho">Despesas de Viagem a Trabalho</option>
                 <option value="Tráfego Pago">Tráfego Pago</option>
                 <option value="Cartão de Crédito">Cartão de Crédito</option>
+                <option value="Conexão e prazer">Conexão e Prazer</option>
                 <option value="Evento único">Evento único</option>
                 <option value="Saúde">Saúde</option>
                 <option value="Salário">Salário</option>
@@ -215,22 +220,26 @@
             <select id="categoria" required>
                 <option value="Água">Água</option>
                 <option value="Air BNB">Air BNB</option>
-                <option value="Aluguel Eliza">Aluguel Eliza</option>
+                <option value="Aluguel Eliza">Aluguel Eliza</option>v
                 <option value="Aluguel Predilleto">Aluguel Predilleto</option>
                 <option value="Aluguel UWIN">Aluguel UWIN</option>
+                <option value="Aluguel ZIP Morumbi">Aluguel ZIP Morumbi</option>
+                <option value="Alvará">Alvará</option>
                 <option value="Amazon">Amazon</option>
                 <option value="Assinaturas de aplicativos">Assinaturas de aplicativos</option>
                 <option value="Cartão de Crédito">Cartão de Crédito</option>
                 <option value="Bitcoin">Bitcoin</option>
+                <option value="Boliche">Boliche</option>
                 <option value="Bolos">Bolos</option>
-                <option value="Caixinha Nubank - Spotify">Caixinha Nubank - Spotify</option>
-                <option value="Caixinha Nubank - Celular">Caixinha Nubank - Celular</option>
-                <option value="Caixinha Nubank - F1 TV">Caixinha Nubank - F1 TV</option>
-                <option value="Caixinha Nubank - Férias">Caixinha Nubank - Férias</option>
-                <option value="Caixinha Nubank - Natal das Crianças">Caixinha Nubank - Natal das Crianças</option>
+                <option value="Caixinha Nubank">Caixinha Nubank</option>
+                <option value="Caixinha Nubank - Aluguel">Caixinha Nubank - Rendimentos Aluguel</option>
+                <option value="Caixinha Nubank - LEGORB20">Caixinha Nubank - LEGORB20</option>
                 <option value="Investimento - Lighthouse">Investimento - Lighthouse</option>
+                <option value="Rendimentos - Lighthouse">Rendimentos - Lighthouse</option>
+                <option value="Consórcio">Consórcio</option>
                 <option value="Calçados">Calçados</option>
                 <option value="Contador">Contador</option>
+                <option value="Congressos">Congressos</option>
                 <option value="Cursos">Cursos</option>
                 <option value="Celular BR">Celular BR</option>
                 <option value="Celular CA">Celular CA</option>
@@ -258,6 +267,7 @@
                 <option value="Impostos">Impostos</option>
                 <option value="Impostos PJ">Impostos PJ</option>
                 <option value="Impostos PJ Simples Nacional">Impostos PJ Simples Nacional</option>
+                <option value="Insumos para Produção">Insumos para Produção</option>
                 <option value="Internet">Internet</option>
                 <option value="Investimentos">Investimentos</option>
                 <option value="IPVA">IPVA</option>
@@ -287,6 +297,7 @@
                 <option value="PIX Loren">PIX Loren</option>
                 <option value="PIX Pai">PIX Pai</option>
                 <option value="Passeios e expedições">Passeios e expedições</option>
+                <option value="Plano de Saúde">Plano de Saúde</option>
                 <option value="Poupança">Poupança</option>
                 <option value="Pós-Graduação">Pós-Graduação</option>
                 <option value="Posto de Gasolina">Posto de Gasolina</option>
@@ -294,6 +305,7 @@
                 <option value="Renovar CNH">Renovar CNH</option>
                 <option value="Renovar visto">Renovar visto</option>
                 <option value="Restaurantes">Restaurantes</option>
+                <option value="Reembolso de despesas">Reembolso de despesas</option>
                 <option value="Roupas">Roupas</option>
                 <option value="Salário">Salário</option>
                 <option value="Serasa">Serasa</option>
@@ -308,6 +320,8 @@
                 <option value="Taxas - Eliza Miranda">Taxas - Eliza Miranda</option>
                 <option value="Taxas - Predilleto">Taxas - Predilleto</option>
                 <option value="Taxas - UWIN">Taxas - UWIN</option>
+                <option value="Taxas - ZIP Morumbi">Taxas - ZIP Morumbi</option>
+                <option value="Tik Tok Ads">Tik Tok Ads</option>
                 <option value="Uber">Uber</option>
                 <option value="Vale-Alimentação">Vale-Alimentação</option>
                 <option value="Vale-Transporte">Vale-Transporte</option>
@@ -326,6 +340,7 @@
             <select id="tipo" required>
                 <option value="Entrada">Entrada</option>
                 <option value="Saída">Saída</option>
+                <option value="Transferência">Transferência</option>
             </select>
 
             <label for="rsg">RSG (Retorno Sobre Gasto)</label>
@@ -351,46 +366,89 @@
             <!-- GATILHO EMOCIONAL -->
             <label for="gatilho">Gatilho Emocional</label>
             <select id="gatilho" required>
+                <!-- 🔧 Estrutural / Base da vida -->
+                <option value="Manutenção da vida (contas fixas)">Manutenção da vida (contas fixas)</option>
+                <option value="Organização financeira (transferências / investimentos)">Organização financeira
+                    (transferências / investimentos)</option>
+                <option value="Compromissos legais/obrigatórios">Compromissos legais/obrigatórios</option>
+
+                <!-- 🔄 Correção / Ajuste -->
+                <option value="Correção de planejamento">Correção de planejamento</option>
+                <option value="Cobertura de custo não provisionado">Cobertura de custo não provisionado</option>
+                <option value="Rebalanceamento financeiro">Rebalanceamento financeiro</option>
+
+                <!-- 🍽️ Rotina / Hábito -->
+                <option value="Rotina alimentar">Rotina alimentar</option>
+                <option value="Hábito consolidado">Hábito consolidado</option>
+                <option value="Consumo por contexto (horário/local)">Consumo por contexto (horário/local)</option>
+
+                <!-- ⚡ Eficiência / Conveniência -->
+                <option value="Redução de esforço (comodidade)">Redução de esforço (comodidade)</option>
+                <option value="Economia de tempo">Economia de tempo</option>
+                <option value="Decisão automática (baixo esforço)">Decisão automática (baixo esforço)</option>
+
+                <!-- 🎯 Recompensa / Prazer -->
+                <option value="Pequena recompensa">Pequena recompensa</option>
+                <option value="Prazer rotineiro">Prazer rotineiro</option>
+                <option value="Quebra de rotina">Quebra de rotina</option>
+                <option value="Recompensa">Recompensa</option>
+
+                <!-- 👥 Social / Relacional -->
                 <option value="Agradar parceiro">Agradar parceiro</option>
                 <option value="Ajudar alguém">Ajudar alguém</option>
-                <option value="Ansiedade">Ansiedade</option>
-                <option value="Atividade conjunta não planejada">Atividade conjunta não planejada</option>
                 <option value="Apoio financeiro a parente">Apoio financeiro a parente</option>
-                <option value="Cansaço">Cansaço</option>
-                <option value="Comemorações">Comemorações</option>
-                <option value="Confraternizações">Confraternizações</option>
-                <option value="Conveniência">Conveniência</option>
-                <option value="Convite inesperado de amigos">Convite inesperado de amigos</option>
-                <option value="Divisão de contas inesperada">Divisão de contas inesperada</option>
-                <option value="Emoção positiva (celebração)">Emoção positiva (celebração)</option>
-                <option value="Empréstimo inesperado">Empréstimo inesperado</option>
-                <option value="Eventos">Eventos</option>
-                <option value="Evitar conflito familiar">Evitar conflito familiar</option>
-                <option value="Evitar discussão com parceiro">Evitar discussão com parceiro</option>
-                <option value="Favor financeiro">Favor financeiro</option>
-                <option value="Falta de planejamento">Falta de planejamento</option>
-                <option value="Fome fora de hora">Fome fora de hora</option>
-                <option value="Frustração">Frustração</option>
-                <option value="Happy Social">Social</option>
-                <option value="Imagem profissional">Imagem profissional</option>
-                <option value="Indicação de influencer">Indicação de influencer</option>
-                <option value="Influência digital">Influência digital</option>
-                <option value="Manter pertencimento ao grupo">Manter pertencimento ao grupo</option>
-                <option value="Networking">Networking</option>
                 <option value="Pedido de familiar - esposa">Pedido de familiar - esposa</option>
                 <option value="Pedido de familiar - parentes">Pedido de familiar - parentes</option>
                 <option value="Pedido de PIX">Pedido de PIX</option>
-                <option value="Pressão no trabalho">Pressão no trabalho</option>
+                <option value="Evitar conflito familiar">Evitar conflito familiar</option>
+                <option value="Evitar discussão com parceiro">Evitar discussão com parceiro</option>
                 <option value="Pressão social de amigos">Pressão social de amigos</option>
+                <option value="Manter pertencimento ao grupo">Manter pertencimento ao grupo</option>
+                <option value="Divisão de contas inesperada">Divisão de contas inesperada</option>
+                <option value="Convite inesperado de amigos">Convite inesperado de amigos</option>
+                <option value="Networking">Networking</option>
+
+                <!-- 🎉 Eventos / Ocasiões -->
+                <option value="Comemorações">Comemorações</option>
+                <option value="Confraternizações">Confraternizações</option>
+                <option value="Eventos">Eventos</option>
                 <option value="Presentes e celebrações">Presentes e celebrações</option>
-                <option value="Problema imprevisto de terceiros">Problema imprevisto de terceiros</option>
-                <option value="Promoção enviada">Promoção enviada</option>
-                <option value="Recompensa">Recompensa</option>
-                <option value="Sem gatilho">Sem gatilho</option>
+
+                <!-- 🧠 Emocional -->
+                <option value="Ansiedade">Ansiedade</option>
                 <option value="Stress">Stress</option>
-                <option value="Tédio">Tédio</option>
                 <option value="Tristeza">Tristeza</option>
+                <option value="Frustração">Frustração</option>
+                <option value="Tédio">Tédio</option>
+                <option value="Cansaço">Cansaço</option>
+                <option value="Emoção positiva (celebração)">Emoção positiva (celebração)</option>
+
+                <!-- 💼 Trabalho / Profissional -->
+                <option value="Pressão no trabalho">Pressão no trabalho</option>
+                <option value="Imagem profissional">Imagem profissional</option>
+                <option value="Estar bem vestido">Estar bem vestido</option>
+
+                <!-- 📲 Influência externa -->
+                <option value="Influência digital">Influência digital</option>
+                <option value="Indicação de influencer">Indicação de influencer</option>
+                <option value="Promoção enviada">Promoção enviada</option>
+
+                <!-- 🍔 Situações específicas -->
+                <option value="Almoço no trabalho">Almoço no trabalho</option>
+                <option value="Transporte para trabalho">Transporte para trabalho</option>
+                <option value="Fome fora de hora">Fome fora de hora</option>
+                <option value="Doença">Doença</option>
+                <option value="Preguiça de cozinhar ou enjoo">Preguiça de cozinhar ou enjoo</option>
+
+                <!-- 🚨 Exceções / imprevistos -->
+                <option value="Problema imprevisto de terceiros">Problema imprevisto de terceiros</option>
                 <option value="Urgência familiar">Urgência familiar</option>
+                <option value="Empréstimo inesperado">Empréstimo inesperado</option>
+                <option value="Favor financeiro">Favor financeiro</option>
+
+                <!-- 📌 Controle -->
+                <option value="Falta de planejamento">Falta de planejamento</option>
+                <option value="Não identificado (revisar depois)">Não identificado (revisar depois)</option>
             </select>
 
             <!-- NOVO CAMPO: SENTIMENTO PÓS-PAGAMENTO -->
@@ -435,4 +493,5 @@
     </table>
 
 </body>
+
 </html>

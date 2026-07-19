@@ -4,16 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DRE - Demonstração do Resultado</title>
-  <link rel="stylesheet" href="styles.css">
 
   <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+    th { background: #f5f5f5; }
     .categoria-cell {
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 8px;
     }
-
     .dropdown {
       cursor: pointer;
       background: #4CAF50;
@@ -23,23 +25,18 @@
       border-radius: 4px;
       font-size: 12px;
     }
-
-    .dropdown:hover {
-      background: #45a049;
-    }
-
+    .dropdown:hover { background: #45a049; }
     .itens {
       display: none;
       font-size: 14px;
-      margin: 4px 0 0 16px;
-      padding: 0;
+      margin: 6px 0 0 16px;
       list-style: none;
+      padding: 0;
     }
-
-    .itens li {
-      padding: 2px 0;
+    .highlight {
+      font-weight: bold;
+      background: #e6f7ff;
     }
-
     .expand-all-btn {
       background: #2196F3;
       color: white;
@@ -48,199 +45,182 @@
       border-radius: 4px;
       cursor: pointer;
       margin-bottom: 12px;
-      font-size: 14px;
-    }
-
-    .expand-all-btn:hover {
-      background: #1976D2;
-    }
-
-    .highlight {
-      font-weight: bold;
-      background: #e6f7ff;
     }
   </style>
 </head>
+
 <body onload="renderDRE()">
-  <header>
-    <h1>Demonstração do Resultado (DRE)</h1>
-  </header>
 
- <nav>
-    <a href="index.html">Tabela de Gastos</a>
-        <a href="cadastro.html">Cadastrar Despesa/Entrada</a>
-        <a href="debts.html">Dívidas</a>
-        <a href="monthlyExpenses.html">Gastos Mensais</a>
-        <a href="dre.html">Despesas e receitas</a>
-        <a href="burnporsemana.html">Burn por semana</a>
-        <a href="exportpdf.html">Exportar PDF</a>
-        <a href="game.html">InvestGame</a>
-        <a href="portfolio.html">Portfolio</a>
-    </nav>
+<h1>Demonstração do Resultado (DRE)</h1>
 
-  <main>
-    <label for="mes">Selecione o mês:</label>
-    <input type="month" id="mes" onchange="renderDRE()">
+<label>Data inicial:</label>
+<input type="date" id="dataInicio" onchange="renderDRE()">
 
-    <button class="expand-all-btn" onclick="toggleAllItens()">Expandir Tudo</button>
+<label>Data final:</label>
+<input type="date" id="dataFim" onchange="renderDRE()">
 
-    <table>
-      <thead>
-        <tr>
-          <th>Categoria</th>
-          <th>Valor (R$)</th>
-        </tr>
-      </thead>
-      <tbody id="dreBody"></tbody>
-    </table>
-  </main>
+<button class="expand-all-btn" onclick="toggleAllItens()">Expandir Tudo</button>
 
-  <script>
-    let allExpanded = false;
+<table>
+  <thead>
+    <tr>
+      <th>Categoria</th>
+      <th>Valor (R$)</th>
+    </tr>
+  </thead>
+  <tbody id="dreBody"></tbody>
+</table>
 
-    function renderDRE() {
-      const despesas = JSON.parse(localStorage.getItem("despesas")) || [];
-      const tbody = document.getElementById("dreBody");
-      tbody.innerHTML = "";
+<script>
+let allExpanded = false;
 
-      const mesSelecionado = document.getElementById("mes").value;
-      const filtradas = mesSelecionado
-        ? despesas.filter(d => d.data.startsWith(mesSelecionado))
-        : despesas;
+// 🔥 CLASSIFICAÇÃO INTELIGENTE
+function mapearMacro(d) {
 
-      const categorias = {
-        "Entradas": [],
-        "Despesas Fixas": [],
-        "Despesas Variáveis": [],
-        "Impostos e Taxas": [],
-        "Dívidas e Financiamentos": [],
-        "Investimentos / Poupança": [],
-        "Outros": []
-      };
+  if (d.tipo === "Entrada") return "Entradas";
 
-      filtradas.forEach(d => {
-        if (d.tipo === "Entrada" || ["Salário", "PIX Pai", "PIX Loren", "Restituição Impostos", "Resgate Caixinha", "Venda Bitcoin"].includes(d.categoria)) {
-          categorias["Entradas"].push(d);
+  // 🔒 Regras forçadas (prioridade máxima)
+  const fixasForcadas = ["Pensão", "Contador"];
+  if (fixasForcadas.includes(d.categoria)) {
+    return "Despesas Fixas";
+  }
 
-        } else if (["Aluguel", "Condomínio", "Luz", "Água", "Internet", "Celular", "Spotify", "Assinaturas", "Educação", "Pós-graduação", "Curso", "FIES", "Pensão", "Dízimo", "Contador", "UWIN condomínio"].includes(d.categoria)) {
-          categorias["Despesas Fixas"].push(d);
+  switch (d.categoriaMaster) {
 
-        } else if (["Supermercado", "Padaria", "Drogaria", "Saúde", "Uber", "Táxi", "Metrô", "Passagem", "Restaurante", "Lanche", "Sorveteria", "Coffee shop", "Chocolateria", "Doceria", "Presentes", "Compras", "Amazon", "Calçados", "Livros", "Cinema", "Passeios", "Beleza"].includes(d.categoria)) {
-          categorias["Despesas Variáveis"].push(d);
+    case "Moradia":
+    case "Saúde":
+    case "Educação":
+      return "Despesas Fixas";
 
-        } else if (["Impostos", "IPTU", "IPVA", "Impostos PJ", "Simples Nacional", "Taxas", "Alvará"].includes(d.categoria)) {
-          categorias["Impostos e Taxas"].push(d);
+    case "Alimentação":
+    case "Transporte":
+    case "Lazer":
+    case "Pessoal":
+    case "Conexão e prazer":
+      return "Despesas Variáveis";
 
-        } else if (["Cartão de Crédito", "Empréstimos", "FIES"].includes(d.categoria)) {
-          categorias["Dívidas e Financiamentos"].push(d);
+    case "Dívidas e Obrigações":
+      return "Impostos e Taxas";
 
-        } else if (["Caixinha Nubank", "Bitcoin", "Aplicação", "Investimento"].includes(d.categoria)) {
-          categorias["Investimentos / Poupança"].push(d);
+    case "Investimentos":
+      return "Investimentos";
 
-        } else {
-          categorias["Outros"].push(d);
-        }
-      });
+    default:
+      return "Outros";
+  }
+}
 
-      const dreLinhas = [];
-      let totalEntradas = soma(categorias["Entradas"]);
-      dreLinhas.push({ categoria: "Receita Bruta (Entradas)", valor: totalEntradas, itens: categorias["Entradas"] });
+function renderDRE() {
 
-      let despesasFixas = soma(categorias["Despesas Fixas"]);
-      dreLinhas.push({ categoria: "(-) Despesas Fixas", valor: -despesasFixas, itens: categorias["Despesas Fixas"] });
+  const despesas = JSON.parse(localStorage.getItem("despesas")) || [];
+  const tbody = document.getElementById("dreBody");
+  tbody.innerHTML = "";
 
-      let despesasVar = soma(categorias["Despesas Variáveis"]);
-      dreLinhas.push({ categoria: "(-) Despesas Variáveis", valor: -despesasVar, itens: categorias["Despesas Variáveis"] });
+  const inicio = document.getElementById("dataInicio").value;
+  const fim = document.getElementById("dataFim").value;
 
-      let resultadoOperacional = totalEntradas - despesasFixas - despesasVar;
-      dreLinhas.push({ categoria: "= Resultado Operacional", valor: resultadoOperacional, itens: [] });
+  const filtradas = despesas.filter(d => {
 
-      let impostos = soma(categorias["Impostos e Taxas"]);
-      dreLinhas.push({ categoria: "(-) Impostos e Taxas", valor: -impostos, itens: categorias["Impostos e Taxas"] });
+    if (d.tipo === "Transferência") return false;
 
-      let dividas = soma(categorias["Dívidas e Financiamentos"]);
-      dreLinhas.push({ categoria: "(-) Dívidas e Financiamentos", valor: -dividas, itens: categorias["Dívidas e Financiamentos"] });
+    if (inicio && d.data < inicio) return false;
+    if (fim && d.data > fim) return false;
 
-      let investimentos = soma(categorias["Investimentos / Poupança"]);
-      dreLinhas.push({ categoria: "(-) Investimentos / Poupança", valor: -investimentos, itens: categorias["Investimentos / Poupança"] });
+    return true;
+  });
 
-      let outros = soma(categorias["Outros"]);
-      dreLinhas.push({ categoria: "(-) Outros", valor: -outros, itens: categorias["Outros"] });
+  const categorias = {
+    "Entradas": [],
+    "Despesas Fixas": [],
+    "Despesas Variáveis": [],
+    "Investimentos": [],
+    "Impostos e Taxas": [],
+    "Outros": []
+  };
 
-      let resultadoLiquido = resultadoOperacional - impostos - dividas - investimentos - outros;
-      dreLinhas.push({ categoria: "= Resultado Líquido", valor: resultadoLiquido, itens: [] });
+  filtradas.forEach(d => {
+    const macro = mapearMacro(d);
+    categorias[macro].push(d);
+  });
 
-      // Renderização
-      dreLinhas.forEach((item, index) => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td class="categoria-cell ${item.categoria.startsWith('=') ? 'highlight' : ''}">
-            ${item.categoria}
-            ${item.itens.length > 0
-              ? `<button class="dropdown" onclick="toggleItens(${index}, this)">Ver Itens</button>`
-              : ""}
-          </td>
-          <td class="${item.categoria.startsWith('=') ? 'highlight' : ''}">${item.valor.toFixed(2)}</td>
-        `;
-        tbody.appendChild(row);
+  const soma = lista => lista.reduce((t, i) => t + i.valor, 0);
 
-        if (item.itens.length > 0) {
-          const rowItens = document.createElement("tr");
-          rowItens.innerHTML = `
-            <td colspan="2">
-              <ul class="itens" id="itens-${index}">
-                ${item.itens.map(i => `<li>${i.data} - ${i.descricao} - R$ ${i.valor.toFixed(2)}</li>`).join("")}
-              </ul>
-            </td>
-          `;
-          tbody.appendChild(rowItens);
-        }
-      });
+  const entradas = soma(categorias["Entradas"]);
+  const fixas = soma(categorias["Despesas Fixas"]);
+  const variaveis = soma(categorias["Despesas Variáveis"]);
+  const investimentos = soma(categorias["Investimentos"]);
+  const impostos = soma(categorias["Impostos e Taxas"]);
+  const outros = soma(categorias["Outros"]);
 
-      // Linha de Margem (%)
-      let margem = totalEntradas ? (resultadoLiquido / totalEntradas) * 100 : 0;
-      const rowMargem = document.createElement("tr");
-      rowMargem.innerHTML = `
-        <td class="highlight">Margem (%)</td>
-        <td class="highlight">${margem.toFixed(2)}%</td>
-      `;
-      tbody.appendChild(rowMargem);
+  const operacional = entradas - fixas - variaveis;
+  const liquido = operacional - investimentos - impostos - outros;
 
-      // Reset botão global
-      allExpanded = false;
-      document.querySelector(".expand-all-btn").textContent = "Expandir Tudo";
-    }
+  const dre = [
+    { nome: "Receita Bruta", valor: entradas, itens: categorias["Entradas"] },
+    { nome: "(-) Despesas Fixas", valor: -fixas, itens: categorias["Despesas Fixas"] },
+    { nome: "(-) Despesas Variáveis", valor: -variaveis, itens: categorias["Despesas Variáveis"] },
+    { nome: "= Resultado Operacional", valor: operacional, itens: [] },
+    { nome: "(-) Investimentos", valor: -investimentos, itens: categorias["Investimentos"] },
+    { nome: "(-) Impostos e Taxas", valor: -impostos, itens: categorias["Impostos e Taxas"] },
+    { nome: "(-) Outros", valor: -outros, itens: categorias["Outros"] },
+    { nome: "= Resultado Líquido", valor: liquido, itens: [] }
+  ];
 
-    function soma(lista) {
-      return lista.reduce((acc, d) => acc + d.valor, 0);
-    }
+  dre.forEach((linha, i) => {
+    tbody.innerHTML += `
+      <tr>
+        <td class="categoria-cell ${linha.nome.startsWith('=') ? 'highlight' : ''}">
+          ${linha.nome}
+          ${linha.itens.length ? `<button class="dropdown" onclick="toggleItens(${i}, this)">Ver Itens</button>` : ""}
+        </td>
+        <td class="${linha.nome.startsWith('=') ? 'highlight' : ''}">
+          ${linha.valor.toFixed(2)}
+        </td>
+      </tr>
+      ${linha.itens.length ? `
+      <tr>
+        <td colspan="2">
+          <ul class="itens" id="itens-${i}">
+            ${linha.itens.map(x =>
+              `<li>${x.data} - ${x.descricao} (${x.categoria}) - R$ ${x.valor.toFixed(2)}</li>`
+            ).join("")}
+          </ul>
+        </td>
+      </tr>` : ""}
+    `;
+  });
 
-    function toggleItens(index, btn) {
-      const ul = document.getElementById(`itens-${index}`);
-      if (ul.style.display === "block") {
-        ul.style.display = "none";
-        btn.textContent = "Ver Itens";
-      } else {
-        ul.style.display = "block";
-        btn.textContent = "Ocultar Itens";
-      }
-    }
+  const margem = entradas ? (liquido / entradas) * 100 : 0;
 
-    function toggleAllItens() {
-      const listas = document.querySelectorAll(".itens");
-      allExpanded = !allExpanded;
+  tbody.innerHTML += `
+    <tr>
+      <td class="highlight">Margem (%)</td>
+      <td class="highlight">${margem.toFixed(2)}%</td>
+    </tr>
+  `;
 
-      listas.forEach(lista => {
-        lista.style.display = allExpanded ? "block" : "none";
-      });
+  allExpanded = false;
+}
 
-      document.querySelectorAll(".dropdown").forEach(btn => {
-        btn.textContent = allExpanded ? "Ocultar Itens" : "Ver Itens";
-      });
+function toggleItens(i, btn) {
+  const ul = document.getElementById(`itens-${i}`);
+  const aberto = ul.style.display === "block";
+  ul.style.display = aberto ? "none" : "block";
+  btn.textContent = aberto ? "Ver Itens" : "Ocultar Itens";
+}
 
-      const btn = document.querySelector(".expand-all-btn");
-      btn.textContent = allExpanded ? "Recolher Tudo" : "Expandir Tudo";
-    }
-  </script>
+function toggleAllItens() {
+  allExpanded = !allExpanded;
+
+  document.querySelectorAll(".itens").forEach(ul => {
+    ul.style.display = allExpanded ? "block" : "none";
+  });
+
+  document.querySelectorAll(".dropdown").forEach(btn => {
+    btn.textContent = allExpanded ? "Ocultar Itens" : "Ver Itens";
+  });
+}
+</script>
+
 </body>
 </html>
