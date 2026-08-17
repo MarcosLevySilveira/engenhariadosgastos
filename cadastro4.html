@@ -4,12 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerenciar Despesas/Entradas</title>
+    <title>Lighthouse — Gerenciar Despesas/Entradas</title>
     <link rel="stylesheet" href="styles.css">
 
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0D1B2A">
+    <meta name="theme-color" content="#0B1622">
     <link rel="icon" href="icon-192.png">
     <link rel="apple-touch-icon" href="icon-192.png">
 
@@ -25,6 +25,10 @@
             if (hora >= 12 && hora < 18) return "Tarde";
             if (hora >= 18 && hora < 24) return "Noite";
             return "Madrugada";
+        }
+
+        function formatarMoeda(valor) {
+            return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
         function saveData(event) {
@@ -76,22 +80,25 @@
 
             despesas.forEach((despesa, index) => {
                 const row = document.createElement("tr");
+                row.setAttribute("data-tipo", despesa.tipo);
                 row.innerHTML = `
-                  <td>${despesa.data}</td>
-                  <td>${despesa.horario || "-"}</td>
-                  <td>${despesa.periodo || "-"}</td>
-                  <td>${despesa.categoriaMaster || "-"}</td>
-                  <td>${despesa.categoria}</td>
-                  <td>${despesa.descricao}</td>
-                  <td>${despesa.valor.toFixed(2)}</td>
-                  <td>${despesa.tipo}</td>
-                  <td>${despesa.rsg}</td>
-                  <td>${despesa.tipoGasto}</td>
-                  <td>${despesa.gatilho || "-"}</td>
-                  <td>${despesa.sentimentoPos || "-"}</td>
-                  <td>
-                      <button onclick="editData(${index})">Editar</button>
-                      <button onclick="deleteData(${index})">Deletar</button>
+                  <td data-label="Data">${despesa.data}</td>
+                  <td data-label="Horário">${despesa.horario || "-"}</td>
+                  <td data-label="Período">${despesa.periodo || "-"}</td>
+                  <td data-label="Categoria Master">${despesa.categoriaMaster || "-"}</td>
+                  <td data-label="Micro-Categoria">${despesa.categoria}</td>
+                  <td data-label="Descrição">${despesa.descricao}</td>
+                  <td data-label="Valor (R$)">${formatarMoeda(despesa.valor)}</td>
+                  <td data-label="Tipo">${despesa.tipo}</td>
+                  <td data-label="RSG">${despesa.rsg || "-"}</td>
+                  <td data-label="Tipo de Gasto">${despesa.tipoGasto || "-"}</td>
+                  <td data-label="Gatilho Emocional">${despesa.gatilho || "-"}</td>
+                  <td data-label="Sentimento Pós">${despesa.sentimentoPos || "-"}</td>
+                  <td data-label="Ações">
+                      <div class="table-actions">
+                          <button class="btn-small btn-edit" onclick="editData(${index})">Editar</button>
+                          <button class="btn-small btn-delete" onclick="deleteData(${index})">Deletar</button>
+                      </div>
                   </td>
                 `;
                 tableBody.appendChild(row);
@@ -119,6 +126,8 @@
             document.getElementById("saveBtn").onclick = function () {
                 updateData(index);
             };
+
+            document.getElementById("formCadastro").scrollIntoView({ behavior: "smooth" });
         }
 
         function updateData(index) {
@@ -187,11 +196,12 @@
 
 <body onload="initPage()">
 
-    <header>
-        <h1>Gerenciar Despesas/Entradas</h1>
+    <header class="topbar">
+        <a href="index.html" class="wordmark">Lighthouse</a>
+        <button class="nav-toggle" id="navToggle" aria-controls="site-nav" aria-expanded="false">Menu</button>
     </header>
 
-    <nav>
+    <nav id="site-nav" class="site-nav">
         <a href="index.html">Tabela de Gastos</a>
         <a href="cadastro4.html" class="active">Cadastrar Despesa/Entrada</a>
         <a href="debts.html">Dívidas</a>
@@ -203,13 +213,13 @@
         <a href="burnporsemana.html">Burn por semana</a>
         <a href="exportpdf.html">Exportar PDF</a>
         <a href="portfolio.html">Portfolio</a>
-
     </nav>
 
     <main>
-        <h1>Cadastrar Nova Despesa/Entrada</h1>
-
-        <button type="button" onclick="carregarBaseCsvManual()">Carregar base do CSV</button>
+        <div class="form-header">
+            <h1>Cadastrar Nova Despesa/Entrada</h1>
+            <button type="button" class="btn-ghost" onclick="carregarBaseCsvManual()">Carregar base do CSV</button>
+        </div>
 
         <form id="formCadastro" onsubmit="saveData(event)">
 
@@ -323,7 +333,6 @@
                 <option value="PIX Loren">PIX Loren</option>
                 <option value="PIX Pai">PIX Pai</option>
                 <option value="Passeios e expedições">Passeios e expedições</option>
-                <option value="Plano de Saúde">Plano de Saúde</option>
                 <option value="Poupança">Poupança</option>
                 <option value="Pós-Graduação">Pós-Graduação</option>
                 <option value="Posto de Gasolina">Posto de Gasolina</option>
@@ -496,28 +505,41 @@
 
             <button type="submit" id="saveBtn">Salvar</button>
         </form>
+
+        <section class="ledger-section">
+            <h2>Lançamentos cadastrados</h2>
+            <div class="ledger-wrap">
+                <table class="ledger">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Horário</th>
+                            <th>Período</th>
+                            <th>Categoria Master</th>
+                            <th>Micro-Categoria</th>
+                            <th>Descrição</th>
+                            <th>Valor</th>
+                            <th>Tipo</th>
+                            <th>RSG</th>
+                            <th>Tipo de Gasto</th>
+                            <th>Gatilho Emocional</th>
+                            <th>Sentimento Pós</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="despesasList"></tbody>
+                </table>
+            </div>
+        </section>
     </main>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Data</th>
-                <th>Horário</th>
-                <th>Período</th>
-                <th>Categoria Master</th>
-                <th>Micro-Categoria</th>
-                <th>Descrição</th>
-                <th>Valor</th>
-                <th>Tipo</th>
-                <th>RSG</th>
-                <th>Tipo de Gasto</th>
-                <th>Gatilho Emocional</th>
-                <th>Sentimento Pós</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody id="despesasList"></tbody>
-    </table>
+    <script>
+        document.getElementById("navToggle").addEventListener("click", function () {
+            const nav = document.getElementById("site-nav");
+            const aberto = nav.classList.toggle("open");
+            this.setAttribute("aria-expanded", aberto);
+        });
+    </script>
 
 </body>
 

@@ -414,7 +414,48 @@ button.btn-primary,
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.btn-small {
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.76rem;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--mist);
+}
+
+.btn-small.btn-edit {
+    border-color: var(--beacon);
+    color: var(--beacon);
+}
+
+.btn-small.btn-delete {
+    border-color: var(--coral);
+    color: var(--coral);
+}
+
+.form-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 24px;
+}
+
+.form-header h1 {
+    font-size: 1.3rem;
 }
 
 table.ledger {
