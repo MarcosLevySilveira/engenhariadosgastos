@@ -5,7 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle de Finanças Pessoais</title>
     <link rel="stylesheet" href="styles.css">
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0D1B2A">
+    <link rel="icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Base de dados inicial (gerada a partir do CSV importado) -->
+    <script src="dados_iniciais.js"></script>
 </head>
 <body>
     <header>
@@ -34,6 +43,7 @@
             <label for="data-fim">Data fim:</label>
             <input type="date" id="data-fim">
             <button onclick="atualizarTabela()">Filtrar</button>
+            <button type="button" onclick="carregarBaseCsvManual()">Carregar base do CSV</button>
         </div>
 
         <div class="card-container">
@@ -231,7 +241,18 @@
             });
         }
 
-        window.onload = atualizarTabela;
+        window.onload = function () {
+            inicializarDadosLighthouse(); // carrega o CSV base no localStorage, se ainda não houver dados
+            atualizarTabela();
+        };
+
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("sw.js")
+                    .then((reg) => console.log("Service worker registrado:", reg.scope))
+                    .catch((err) => console.warn("Falha ao registrar service worker:", err));
+            });
+        }
     </script>
 </body>
 </html>

@@ -7,6 +7,15 @@
     <title>Gerenciar Despesas/Entradas</title>
     <link rel="stylesheet" href="styles.css">
 
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0D1B2A">
+    <link rel="icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <!-- Base de dados inicial (gerada a partir do CSV importado) -->
+    <script src="dados_iniciais.js"></script>
+
     <script>
         function getPeriodoDoDia(horario) {
             if (!horario) return "-";
@@ -160,10 +169,23 @@
             alert("Cadastro deletado com sucesso!");
             window.location.reload();
         }
+
+        function initPage() {
+            inicializarDadosLighthouse(); // carrega o CSV base no localStorage, se ainda não houver dados
+            loadData();
+        }
+
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("sw.js")
+                    .then((reg) => console.log("Service worker registrado:", reg.scope))
+                    .catch((err) => console.warn("Falha ao registrar service worker:", err));
+            });
+        }
     </script>
 </head>
 
-<body onload="loadData()">
+<body onload="initPage()">
 
     <header>
         <h1>Gerenciar Despesas/Entradas</h1>
@@ -186,6 +208,8 @@
 
     <main>
         <h1>Cadastrar Nova Despesa/Entrada</h1>
+
+        <button type="button" onclick="carregarBaseCsvManual()">Carregar base do CSV</button>
 
         <form id="formCadastro" onsubmit="saveData(event)">
 
@@ -220,7 +244,7 @@
             <select id="categoria" required>
                 <option value="Água">Água</option>
                 <option value="Air BNB">Air BNB</option>
-                <option value="Aluguel Eliza">Aluguel Eliza</option>v
+                <option value="Aluguel Eliza">Aluguel Eliza</option>
                 <option value="Aluguel Predilleto">Aluguel Predilleto</option>
                 <option value="Aluguel UWIN">Aluguel UWIN</option>
                 <option value="Aluguel ZIP Morumbi">Aluguel ZIP Morumbi</option>
@@ -234,6 +258,7 @@
                 <option value="Caixinha Nubank">Caixinha Nubank</option>
                 <option value="Caixinha Nubank - Aluguel">Caixinha Nubank - Rendimentos Aluguel</option>
                 <option value="Caixinha Nubank - LEGORB20">Caixinha Nubank - LEGORB20</option>
+                <option value="Claude AI">Claude AI</option>
                 <option value="Investimento - Lighthouse">Investimento - Lighthouse</option>
                 <option value="Rendimentos - Lighthouse">Rendimentos - Lighthouse</option>
                 <option value="Consórcio">Consórcio</option>
@@ -263,6 +288,7 @@
                 <option value="FGTS">FGTS</option>
                 <option value="FIES">FIES</option>
                 <option value="F1 game">F1 game</option>
+                <option value="F1 TV">F1 TV</option>
                 <option value="Games">Games</option>
                 <option value="Impostos">Impostos</option>
                 <option value="Impostos PJ">Impostos PJ</option>
@@ -315,6 +341,7 @@
                 <option value="Shopping">Shopping</option>
                 <option value="Show">Show</option>
                 <option value="Sorveteria">Sorveteria</option>
+                <option value="Spotify">Spotify</option>
                 <option value="Supermercado">Supermercado</option>
                 <option value="Taxas gerais">Taxas gerais</option>
                 <option value="Taxas - Eliza Miranda">Taxas - Eliza Miranda</option>
