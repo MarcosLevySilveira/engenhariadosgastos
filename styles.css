@@ -556,6 +556,68 @@ table.ledger.ledger--grid thead th {
     white-space: nowrap;
 }
 
+/* ---------- Linhas expansíveis (master / subcategoria) ---------- */
+
+.hint-text {
+    color: var(--fog);
+    font-size: 0.82rem;
+    margin: 8px 0 16px;
+}
+
+table.ledger tr.row-master {
+    background: var(--surface-raised);
+    cursor: pointer;
+    user-select: none;
+}
+
+table.ledger tr.row-master td {
+    font-weight: 600;
+    color: var(--mist);
+}
+
+table.ledger tr.row-master:active {
+    background: var(--surface-alt);
+}
+
+table.ledger tr.row-sub td:first-child {
+    padding-left: 30px;
+    color: var(--fog);
+}
+
+table.ledger tr.hidden {
+    display: none;
+}
+
+.chevron {
+    display: inline-block;
+    margin-right: 8px;
+    transition: transform 0.15s ease;
+    color: var(--beacon);
+}
+
+tr.row-master.is-open .chevron {
+    transform: rotate(90deg);
+}
+
+.positivo {
+    color: var(--coral);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+}
+
+.negativo {
+    color: var(--tide);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+}
+
+tfoot td {
+    background: var(--surface-alt);
+    font-weight: 600;
+    color: var(--mist);
+    border-top: 2px solid var(--line);
+}
+
 /* ---------- Insight card (padrão em destaque) ---------- */
 
 .hero-value--text {

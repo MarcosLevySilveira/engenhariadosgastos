@@ -3,203 +3,227 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Gastos por Categoria e Mês</title>
+  <title>Lighthouse — Gastos Macro por Categoria e Mês</title>
   <link rel="stylesheet" href="styles.css">
 
-  <style>
-    .master {
-      background: #eaeaea;
-      cursor: pointer;
-    }
-    .hidden {
-      display: none;
-    }
-    .positivo { color: red; }
-    .negativo { color: green; }
-    tfoot {
-      background: #ddd;
-      font-weight: bold;
-    }
-  </style>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0B1622">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <!-- Base de dados inicial (gerada a partir do CSV importado) -->
+  <script src="dados_iniciais.js"></script>
 </head>
 
 <body>
-  <header>
-    <h1>Gastos por Categoria e Mês</h1>
+  <header class="topbar">
+    <a href="index.html" class="wordmark">Lighthouse</a>
+    <button class="nav-toggle" id="navToggle" aria-controls="site-nav" aria-expanded="false">Menu</button>
   </header>
 
-  <nav>
-        <a href="index.html">Tabela de Gastos</a>
-        <a href="cadastro4.html" class="active">Cadastrar Despesa/Entrada</a>
-        <a href="debts.html">Dívidas</a>
-        <a href="monthlyExpenses.html">Gastos Mensais</a>
-        <a href="monthlyexpensestransfer.html">Transferências Mensais</a>
-        <a href="mastermonthly.html">Gastos Macro</a>
-        <a href="mastermonthlytransfer.html">Transferências Macro</a>
-        <a href="dre.html">Despesas e receitas</a>
-        <a href="burnporsemana.html">Burn por semana</a>
-        <a href="exportpdf.html">Exportar PDF</a>
-        <a href="game.html">InvestGame</a>
-        <a href="portfolio.html">Portfolio</a>
+  <nav id="site-nav" class="site-nav">
+    <a href="index.html">Tabela de Gastos</a>
+    <a href="cadastro4.html">Cadastrar Despesa/Entrada</a>
+    <a href="debts.html">Dívidas</a>
+    <a href="monthlyExpenses.html">Gastos Mensais</a>
+    <a href="monthlyexpensestransfer.html">Transferências Mensais</a>
+    <a href="mastermonthly.html" class="active">Gastos Macro</a>
+    <a href="mastermonthlytransfer.html">Transferências Macro</a>
+    <a href="dre.html">Despesas e receitas</a>
+    <a href="burnporsemana.html">Burn por semana</a>
+    <a href="exportpdf.html">Exportar PDF</a>
+    <a href="rsgDash.html">Dashboard RSG</a>
+    <a href="game.html">InvestGame</a>
+    <a href="portfolio.html">Portfolio</a>
   </nav>
 
   <main>
-    <table>
-      <thead id="cabecalho-tabela"></thead>
-      <tbody id="corpo-tabela"></tbody>
-      <tfoot id="rodape-tabela"></tfoot>
-    </table>
+    <div class="form-header">
+      <h1>Gastos macro por categoria e mês</h1>
+      <button type="button" class="btn-ghost" onclick="carregarBaseCsvManual()">Carregar base do CSV</button>
+    </div>
+
+    <p class="hint-text">Toque numa categoria master pra abrir as subcategorias.</p>
+
+    <section class="ledger-section">
+      <div class="ledger-wrap">
+        <table class="ledger ledger--grid">
+          <thead id="cabecalho-tabela"></thead>
+          <tbody id="corpo-tabela"></tbody>
+          <tfoot id="rodape-tabela"></tfoot>
+        </table>
+      </div>
+    </section>
   </main>
 
 <script>
-function carregarDespesas() {
-  return JSON.parse(localStorage.getItem("despesas")) || [];
-}
-
-function agruparDespesasPorCategoriaEMes(despesas) {
-  const dados = {};
-  const mesesSet = new Set();
-
-  despesas.forEach(d => {
-    if (d.tipo !== "Saída") return;
-
-    const data = new Date(d.data);
-    const mes = data.toISOString().slice(0,7);
-    mesesSet.add(mes);
-
-    const master = d.categoriaMaster || "Sem Master";
-    const categoria = d.categoria || "Sem Categoria";
-
-    if (!dados[master]) dados[master] = {};
-    if (!dados[master][categoria]) dados[master][categoria] = {};
-    if (!dados[master][categoria][mes]) dados[master][categoria][mes] = 0;
-
-    dados[master][categoria][mes] += d.valor;
-  });
-
-  return {
-    dados,
-    meses: Array.from(mesesSet).sort()
-  };
-}
-
-function calcularVariacao(valores, meses) {
-  if (meses.length < 2) return "-";
-
-  const ultimo = valores[meses[meses.length - 1]] || 0;
-  const penultimo = valores[meses[meses.length - 2]] || 0;
-
-  if (penultimo === 0) return ultimo > 0 ? "↑ 100%" : "-";
-
-  const variacao = ((ultimo - penultimo) / penultimo) * 100;
-
-  const classe = variacao > 0 ? "positivo" : "negativo";
-  const seta = variacao > 0 ? "↑" : "↓";
-
-  return `<span class="${classe}">${seta} ${variacao.toFixed(1)}%</span>`;
-}
-
-function montarTabela({ dados, meses }) {
-  const cabecalho = document.getElementById("cabecalho-tabela");
-  const corpo = document.getElementById("corpo-tabela");
-  const rodape = document.getElementById("rodape-tabela");
-
-  const mesesFormatados = meses.map(m => {
-    const [ano, mes] = m.split("-");
-    return new Date(ano, mes - 1)
-      .toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
-  });
-
-  // Cabeçalho
-  cabecalho.innerHTML = `
-    <tr>
-      <th>Categoria</th>
-      ${mesesFormatados.map(m => `<th>${m}</th>`).join("")}
-      <th>Total</th>
-      <th>Var %</th>
-    </tr>
-  `;
-
-  // 🔢 Totais gerais
-  const totaisPorMes = Array(meses.length).fill(0);
-  let totalGeral = 0;
-
-  Object.entries(dados).forEach(([master, categorias], idx) => {
-
-    const masterId = "m_" + idx;
-
-    const totaisMaster = {};
-    meses.forEach(m => {
-      totaisMaster[m] = Object.values(categorias)
-        .reduce((s, cat) => s + (cat[m] || 0), 0);
+    document.getElementById("navToggle").addEventListener("click", function () {
+        const nav = document.getElementById("site-nav");
+        const aberto = nav.classList.toggle("open");
+        this.setAttribute("aria-expanded", aberto);
     });
 
-    const totalMaster = Object.values(totaisMaster)
-      .reduce((a,b) => a + b, 0);
+    function formatarMoeda(valor) {
+        return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
 
-    const variacaoMaster = calcularVariacao(totaisMaster, meses);
+    function carregarDespesas() {
+      return JSON.parse(localStorage.getItem("despesas")) || [];
+    }
 
-    // Linha master
-    const trMaster = document.createElement("tr");
-    trMaster.classList.add("master");
+    function agruparDespesasPorCategoriaEMes(despesas) {
+      const dados = {};
+      const mesesSet = new Set();
 
-    trMaster.onclick = () => {
-      document.querySelectorAll(`.sub-${masterId}`)
-        .forEach(el => el.classList.toggle("hidden"));
-    };
+      despesas.forEach(d => {
+        if (d.tipo !== "Saída") return;
 
-    trMaster.innerHTML = `
-      <td><strong>▶ ${master}</strong></td>
-      ${meses.map(m => `<td><strong>R$ ${(totaisMaster[m]||0).toFixed(2)}</strong></td>`).join("")}
-      <td><strong>R$ ${totalMaster.toFixed(2)}</strong></td>
-      <td>${variacaoMaster}</td>
-    `;
+        const data = new Date(d.data);
+        const mes = data.toISOString().slice(0,7);
+        mesesSet.add(mes);
 
-    corpo.appendChild(trMaster);
+        const master = d.categoriaMaster || "Sem Master";
+        const categoria = d.categoria || "Sem Categoria";
 
-    // Subcategorias
-    Object.entries(categorias).forEach(([categoria, valores]) => {
+        if (!dados[master]) dados[master] = {};
+        if (!dados[master][categoria]) dados[master][categoria] = {};
+        if (!dados[master][categoria][mes]) dados[master][categoria][mes] = 0;
 
-      const total = meses.reduce((s,m)=>s+(valores[m]||0),0);
-
-      // 🔢 acumula totais
-      meses.forEach((m,i)=>{
-        totaisPorMes[i] += (valores[m]||0);
+        dados[master][categoria][mes] += d.valor;
       });
-      totalGeral += total;
 
-      const variacao = calcularVariacao(valores, meses);
+      return {
+        dados,
+        meses: Array.from(mesesSet).sort()
+      };
+    }
 
-      const tr = document.createElement("tr");
-      tr.classList.add(`sub-${masterId}`, "hidden");
+    function calcularVariacao(valores, meses) {
+      if (meses.length < 2) return "-";
 
-      tr.innerHTML = `
-        <td style="padding-left:25px;">${categoria}</td>
-        ${meses.map(m => `<td>R$ ${(valores[m]||0).toFixed(2)}</td>`).join("")}
-        <td>R$ ${total.toFixed(2)}</td>
-        <td>${variacao}</td>
+      const ultimo = valores[meses[meses.length - 1]] || 0;
+      const penultimo = valores[meses[meses.length - 2]] || 0;
+
+      if (penultimo === 0) return ultimo > 0 ? '<span class="positivo">↑ 100%</span>' : "-";
+
+      const variacao = ((ultimo - penultimo) / penultimo) * 100;
+
+      const classe = variacao > 0 ? "positivo" : "negativo";
+      const seta = variacao > 0 ? "↑" : "↓";
+
+      return `<span class="${classe}">${seta} ${Math.abs(variacao).toFixed(1)}%</span>`;
+    }
+
+    function montarTabela({ dados, meses }) {
+      const cabecalho = document.getElementById("cabecalho-tabela");
+      const corpo = document.getElementById("corpo-tabela");
+      const rodape = document.getElementById("rodape-tabela");
+      corpo.innerHTML = "";
+
+      const mesesFormatados = meses.map(m => {
+        const [ano, mes] = m.split("-");
+        return new Date(ano, mes - 1)
+          .toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
+      });
+
+      cabecalho.innerHTML = `
+        <tr>
+          <th>Categoria</th>
+          ${mesesFormatados.map(m => `<th>${m}</th>`).join("")}
+          <th>Total</th>
+          <th>Var %</th>
+        </tr>
       `;
 
-      corpo.appendChild(tr);
-    });
-  });
+      const totaisPorMes = Array(meses.length).fill(0);
+      let totalGeral = 0;
 
-  // 🧾 Rodapé (TOTAL GERAL)
-  rodape.innerHTML = `
-    <tr>
-      <td>Total Geral</td>
-      ${totaisPorMes.map(v => `<td>R$ ${v.toFixed(2)}</td>`).join("")}
-      <td>R$ ${totalGeral.toFixed(2)}</td>
-      <td>-</td>
-    </tr>
-  `;
-}
+      Object.entries(dados).forEach(([master, categorias], idx) => {
 
-window.onload = () => {
-  const despesas = carregarDespesas();
-  const agrupado = agruparDespesasPorCategoriaEMes(despesas);
-  montarTabela(agrupado);
-};
+        const masterId = "m_" + idx;
+
+        const totaisMaster = {};
+        meses.forEach(m => {
+          totaisMaster[m] = Object.values(categorias)
+            .reduce((s, cat) => s + (cat[m] || 0), 0);
+        });
+
+        const totalMaster = Object.values(totaisMaster)
+          .reduce((a,b) => a + b, 0);
+
+        const variacaoMaster = calcularVariacao(totaisMaster, meses);
+
+        const trMaster = document.createElement("tr");
+        trMaster.classList.add("row-master");
+        trMaster.dataset.masterId = masterId;
+
+        trMaster.onclick = () => {
+          trMaster.classList.toggle("is-open");
+          document.querySelectorAll(`.sub-${masterId}`)
+            .forEach(el => el.classList.toggle("hidden"));
+        };
+
+        trMaster.innerHTML = `
+          <td><span class="chevron">▶</span>${master}</td>
+          ${meses.map(m => `<td>R$ ${formatarMoeda(totaisMaster[m]||0)}</td>`).join("")}
+          <td>R$ ${formatarMoeda(totalMaster)}</td>
+          <td>${variacaoMaster}</td>
+        `;
+
+        corpo.appendChild(trMaster);
+
+        Object.entries(categorias).forEach(([categoria, valores]) => {
+
+          const total = meses.reduce((s,m)=>s+(valores[m]||0),0);
+
+          meses.forEach((m,i)=>{
+            totaisPorMes[i] += (valores[m]||0);
+          });
+          totalGeral += total;
+
+          const variacao = calcularVariacao(valores, meses);
+
+          const tr = document.createElement("tr");
+          tr.classList.add("row-sub", `sub-${masterId}`, "hidden");
+
+          tr.innerHTML = `
+            <td>${categoria}</td>
+            ${meses.map(m => `<td>R$ ${formatarMoeda(valores[m]||0)}</td>`).join("")}
+            <td>R$ ${formatarMoeda(total)}</td>
+            <td>${variacao}</td>
+          `;
+
+          corpo.appendChild(tr);
+        });
+      });
+
+      rodape.innerHTML = `
+        <tr>
+          <td>Total Geral</td>
+          ${totaisPorMes.map(v => `<td>R$ ${formatarMoeda(v)}</td>`).join("")}
+          <td>R$ ${formatarMoeda(totalGeral)}</td>
+          <td>-</td>
+        </tr>
+      `;
+    }
+
+    function init() {
+        inicializarDadosLighthouse();
+        const despesas = carregarDespesas();
+        const agrupado = agruparDespesasPorCategoriaEMes(despesas);
+        montarTabela(agrupado);
+    }
+
+    init();
+
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+            navigator.serviceWorker.register("sw.js")
+                .then((reg) => console.log("Service worker registrado:", reg.scope))
+                .catch((err) => console.warn("Falha ao registrar service worker:", err));
+        });
+    }
 </script>
 
 </body>
