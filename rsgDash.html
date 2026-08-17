@@ -2,211 +2,245 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>Dashboard Matricial – RSG × Tipo de Gasto</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lighthouse — Dashboard RSG × Tipo de Gasto</title>
+<link rel="stylesheet" href="styles.css">
 
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        background: #f5f5f5;
-        margin: 20px;
-    }
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B1622">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 
-    h1, h2 {
-        text-align: center;
-    }
-
-    .card {
-        background: white;
-        padding: 20px;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        margin-bottom: 30px;
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 15px;
-    }
-
-    table th, table td {
-        padding: 8px;
-        border: 1px solid #ccc;
-        text-align: center;
-    }
-
-    /* Heatmap Colors */
-    .heat-low { background: #ffb3b3; }
-    .heat-mid { background: #ffe680; }
-    .heat-high { background: #b3ffb3; }
-
-</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Base de dados inicial (gerada a partir do CSV importado) -->
+<script src="dados_iniciais.js"></script>
 </head>
 
 <body>
+    <header class="topbar">
+        <a href="index.html" class="wordmark">Lighthouse</a>
+        <button class="nav-toggle" id="navToggle" aria-controls="site-nav" aria-expanded="false">Menu</button>
+    </header>
 
-<h1>Dashboard Matricial – RSG × Tipo de Gasto</h1>
+    <nav id="site-nav" class="site-nav">
+        <a href="index.html">Tabela de Gastos</a>
+        <a href="cadastro4.html">Cadastrar Despesa/Entrada</a>
+        <a href="debts.html">Dívidas</a>
+        <a href="monthlyExpenses.html">Gastos Mensais</a>
+        <a href="monthlyexpensestransfer.html">Transferências Mensais</a>
+        <a href="mastermonthly.html">Gastos Macro</a>
+        <a href="mastermonthlytransfer.html">Transferências Macro</a>
+        <a href="dre.html">Despesas e receitas</a>
+        <a href="burnporsemana.html">Burn por semana</a>
+        <a href="exportpdf.html">Exportar PDF</a>
+        <a href="rsgDash.html" class="active">Dashboard RSG</a>
+        <a href="game.html">InvestGame</a>
+        <a href="portfolio.html">Portfolio</a>
+    </nav>
 
-<!-- ---------------- MATRIZ ---------------- -->
-<div class="card">
-    <h2>Matriz RSG × Tipo de Gasto</h2>
-    <div id="matrizContainer"></div>
-</div>
+    <main>
+        <div class="form-header">
+            <h1>Dashboard RSG × Tipo de Gasto</h1>
+            <button type="button" class="btn-ghost" onclick="carregarBaseCsvManual()">Carregar base do CSV</button>
+        </div>
 
-<!-- ---------------- HEATMAP ---------------- -->
-<div class="card">
-    <h2>Heatmap Comportamental</h2>
-    <div id="heatmapContainer"></div>
-</div>
+        <section class="insight-card" id="insightCard">
+            <!-- preenchido via JS -->
+        </section>
 
-<!-- ---------------- BUBBLE CHART ---------------- -->
-<div class="card">
-    <h2>Gráfico de Bolhas — RSG × Tipo de Gasto</h2>
-    <canvas id="bubbleChart" width="400" height="300"></canvas>
-</div>
+        <section class="ledger-section">
+            <h2>Mapa de calor comportamental</h2>
+            <div class="ledger-wrap">
+                <table class="heatmap" id="heatmapTable"></table>
+            </div>
+        </section>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <section class="charts-section">
+            <h2>Distribuição visual</h2>
+            <div class="chart-card"><canvas id="bubbleChart" height="320"></canvas></div>
+        </section>
+    </main>
 
-<script>
-const rsgLevels = ["1","2","3","4","5"];
-const rsgEmojis = { "1": "😡", "2": "😕", "3": "🙂", "4": "😊", "5": "🤩" };
+    <script>
+        document.getElementById("navToggle").addEventListener("click", function () {
+            const nav = document.getElementById("site-nav");
+            const aberto = nav.classList.toggle("open");
+            this.setAttribute("aria-expanded", aberto);
+        });
 
-const tiposGasto = [
-    "Planejado",
-    "Pequeno impulso",
-    "Grande impulso",
-    "Setback não-evitável",
-    "Setback evitável",
-    "Arrependimento"
-];
+        const rsgLevels = ["1", "2", "3", "4", "5"];
+        const rsgEmojis = { "1": "😡", "2": "😕", "3": "🙂", "4": "😊", "5": "🤩" };
+        const rsgValencia = { "1": "baixa", "2": "baixa", "3": "media", "4": "alta", "5": "alta" };
 
-function carregarDados() {
-    return JSON.parse(localStorage.getItem("despesas")) || [];
-}
+        const tiposGasto = [
+            "Planejado",
+            "Pequeno impulso",
+            "Grande impulso",
+            "Setback não-evitável",
+            "Setback evitável",
+            "Arrependimento"
+        ];
 
-// ---------- CALCULAR MATRIZ ----------
-function gerarMatriz() {
-    const dados = carregarDados();
-
-    // Inicializa matriz vazia
-    const matriz = {};
-    rsgLevels.forEach(r => {
-        matriz[r] = {};
-        tiposGasto.forEach(t => matriz[r][t] = 0);
-    });
-
-    // Preenche contagens
-    dados.forEach(item => {
-        if (matriz[item.rsg] && matriz[item.rsg][item.tipoGasto] !== undefined) {
-            matriz[item.rsg][item.tipoGasto]++;
+        function carregarDados() {
+            return JSON.parse(localStorage.getItem("despesas")) || [];
         }
-    });
 
-    return matriz;
-}
+        function gerarMatriz() {
+            const dados = carregarDados();
+            const matriz = {};
+            rsgLevels.forEach(r => {
+                matriz[r] = {};
+                tiposGasto.forEach(t => matriz[r][t] = 0);
+            });
 
-// ---------- TABELA NORMAL ----------
-function renderizarTabela(matriz) {
-    let html = `<table><tr><th>RSG</th>`;
+            dados.forEach(item => {
+                if (matriz[item.rsg] && matriz[item.rsg][item.tipoGasto] !== undefined) {
+                    matriz[item.rsg][item.tipoGasto]++;
+                }
+            });
 
-    tiposGasto.forEach(t => html += `<th>${t}</th>`);
-    html += `</tr>`;
+            return matriz;
+        }
 
-    rsgLevels.forEach(r => {
-        html += `<tr><td>${rsgEmojis[r]} (${r})</td>`;
-        tiposGasto.forEach(t => {
-            html += `<td>${matriz[r][t]}</td>`;
-        });
-        html += `</tr>`;
-    });
+        function renderizarInsight(matriz) {
+            const container = document.getElementById("insightCard");
 
-    html += `</table>`;
-    document.getElementById("matrizContainer").innerHTML = html;
-}
+            let maior = { rsg: null, tipo: null, count: 0 };
+            let total = 0;
 
-// ---------- HEATMAP ----------
-function renderizarHeatmap(matriz) {
-    let html = `<table><tr><th>RSG</th>`;
-
-    tiposGasto.forEach(t => html += `<th>${t}</th>`);
-    html += `</tr>`;
-
-    const maxVal = Math.max(
-        ...rsgLevels.flatMap(r => tiposGasto.map(t => matriz[r][t]))
-    );
-
-    rsgLevels.forEach(r => {
-        html += `<tr><td>${rsgEmojis[r]} (${r})</td>`;
-        tiposGasto.forEach(t => {
-            const v = matriz[r][t];
-            let cls = "heat-low";
-            if (v > maxVal * 0.66) cls = "heat-high";
-            else if (v > maxVal * 0.33) cls = "heat-mid";
-
-            html += `<td class="${cls}">${v}</td>`;
-        });
-        html += `</tr>`;
-    });
-
-    html += `</table>`;
-    document.getElementById("heatmapContainer").innerHTML = html;
-}
-
-// ---------- BUBBLE CHART ----------
-function renderizarBubbleChart(matriz) {
-    const dataset = [];
-
-    rsgLevels.forEach((r, yIndex) => {
-        tiposGasto.forEach((t, xIndex) => {
-            const count = matriz[r][t];
-            if (count > 0) {
-                dataset.push({
-                    label: `${rsgEmojis[r]} / ${t}`,
-                    data: [{ x: xIndex, y: yIndex, r: count * 5 }],
+            rsgLevels.forEach(r => {
+                tiposGasto.forEach(t => {
+                    const v = matriz[r][t];
+                    total += v;
+                    if (v > maior.count) maior = { rsg: r, tipo: t, count: v };
                 });
-            }
-        });
-    });
+            });
 
-    new Chart(document.getElementById("bubbleChart"), {
-        type: "bubble",
-        data: {
-            datasets: dataset
-        },
-        options: {
-            scales: {
-                x: {
-                    min: -1,
-                    max: tiposGasto.length,
-                    ticks: {
-                        callback: (val) => tiposGasto[val] || ""
+            if (total === 0 || maior.count === 0) {
+                container.innerHTML = `
+                    <p class="insight-eyebrow">Padrão mais frequente</p>
+                    <p class="insight-empty">Ainda não há lançamentos com RSG e Tipo de Gasto preenchidos o suficiente
+                    pra revelar um padrão aqui. Esse dado só existe pros gastos que você cadastra manualmente
+                    (a base do CSV histórico não tem RSG). Cadastre alguns gastos com RSG pra começar a ver isso.</p>
+                `;
+                return;
+            }
+
+            const pct = ((maior.count / total) * 100).toFixed(0);
+
+            container.innerHTML = `
+                <p class="insight-eyebrow">Padrão mais frequente</p>
+                <span class="insight-emoji">${rsgEmojis[maior.rsg]}</span>
+                <p class="insight-title">${maior.tipo}</p>
+                <p class="insight-meta">${maior.count} ocorrência${maior.count === 1 ? '' : 's'} · ${pct}% dos gastos com RSG registrado</p>
+            `;
+        }
+
+        function renderizarHeatmap(matriz) {
+            const maxVal = Math.max(
+                1, ...rsgLevels.flatMap(r => tiposGasto.map(t => matriz[r][t]))
+            );
+
+            let html = `<thead><tr><th>RSG</th>`;
+            tiposGasto.forEach(t => html += `<th>${t}</th>`);
+            html += `</tr></thead><tbody>`;
+
+            rsgLevels.forEach(r => {
+                html += `<tr data-valencia="${rsgValencia[r]}"><th>${rsgEmojis[r]}<br>(${r})</th>`;
+                tiposGasto.forEach(t => {
+                    const v = matriz[r][t];
+                    const proporcao = v / maxVal;
+                    const alpha = v === 0 ? 0.05 : 0.12 + proporcao * 0.7;
+                    const corTexto = proporcao > 0.55 ? "#21160a" : "var(--mist)";
+                    html += `<td class="heat-cell" style="background: rgba(244,185,66,${alpha}); color:${corTexto};">${v}</td>`;
+                });
+                html += `</tr>`;
+            });
+
+            html += `</tbody>`;
+            document.getElementById("heatmapTable").innerHTML = html;
+        }
+
+        function renderizarBubbleChart(matriz) {
+            const dataset = [];
+            const RAIO_MIN = 6;
+            const RAIO_MAX = 34;
+
+            const maiorValor = Math.max(
+                1, ...rsgLevels.flatMap(r => tiposGasto.map(t => matriz[r][t]))
+            );
+
+            const coresPorValencia = {
+                baixa: "rgba(240,101,91,0.7)",
+                media: "rgba(244,185,66,0.7)",
+                alta: "rgba(47,191,143,0.7)"
+            };
+
+            rsgLevels.forEach((r, yIndex) => {
+                tiposGasto.forEach((t, xIndex) => {
+                    const count = matriz[r][t];
+                    if (count > 0) {
+                        const proporcao = Math.sqrt(count / maiorValor);
+                        const raio = RAIO_MIN + (RAIO_MAX - RAIO_MIN) * proporcao;
+
+                        dataset.push({
+                            label: `${rsgEmojis[r]} / ${t}`,
+                            data: [{ x: xIndex, y: yIndex, r: raio }],
+                            backgroundColor: coresPorValencia[rsgValencia[r]]
+                        });
                     }
-                },
-                y: {
-                    min: -1,
-                    max: rsgLevels.length,
-                    ticks: {
-                        callback: (val) => rsgEmojis[rsgLevels[val]] || ""
+                });
+            });
+
+            new Chart(document.getElementById("bubbleChart"), {
+                type: "bubble",
+                data: { datasets: dataset },
+                options: {
+                    scales: {
+                        x: {
+                            min: -1,
+                            max: tiposGasto.length,
+                            ticks: {
+                                color: '#93A8B8',
+                                callback: (val) => tiposGasto[val] || ""
+                            },
+                            grid: { color: 'rgba(147,168,184,0.12)' }
+                        },
+                        y: {
+                            min: -1,
+                            max: rsgLevels.length,
+                            ticks: {
+                                color: '#93A8B8',
+                                callback: (val) => rsgEmojis[rsgLevels[val]] || ""
+                            },
+                            grid: { color: 'rgba(147,168,184,0.12)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
                     }
                 }
-            },
-            plugins: {
-                legend: { display: false }
-            }
+            });
         }
-    });
-}
 
-// ---------- INICIALIZAR DASHBOARD ----------
-function init() {
-    const matriz = gerarMatriz();
-    renderizarTabela(matriz);
-    renderizarHeatmap(matriz);
-    renderizarBubbleChart(matriz);
-}
+        function init() {
+            inicializarDadosLighthouse();
+            const matriz = gerarMatriz();
+            renderizarInsight(matriz);
+            renderizarHeatmap(matriz);
+            renderizarBubbleChart(matriz);
+        }
 
-init();
-</script>
+        init();
 
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("sw.js")
+                    .then((reg) => console.log("Service worker registrado:", reg.scope))
+                    .catch((err) => console.warn("Falha ao registrar service worker:", err));
+            });
+        }
+    </script>
 </body>
 </html>

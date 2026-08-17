@@ -556,7 +556,102 @@ table.ledger.ledger--grid thead th {
     white-space: nowrap;
 }
 
+/* ---------- Insight card (padrão em destaque) ---------- */
+
+.insight-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px 22px;
+    text-align: center;
+    margin-top: 24px;
+}
+
+.insight-eyebrow {
+    margin: 0 0 10px;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fog);
+}
+
+.insight-emoji {
+    font-size: 2.6rem;
+    line-height: 1;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.insight-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.3rem, 5.5vw, 1.7rem);
+    font-weight: 600;
+    color: var(--mist);
+    margin: 0 0 10px;
+}
+
+.insight-meta {
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    color: var(--beacon);
+}
+
+.insight-empty {
+    color: var(--fog);
+    font-size: 0.92rem;
+    max-width: 42ch;
+    margin: 0 auto;
+}
+
+/* ---------- Heatmap comportamental (RSG × Tipo de Gasto) ---------- */
+
+table.heatmap {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table.heatmap th,
+table.heatmap td {
+    padding: 12px 10px;
+    text-align: center;
+    font-size: 0.82rem;
+    border: 1px solid var(--surface-alt);
+    white-space: nowrap;
+}
+
+table.heatmap thead th {
+    color: var(--fog);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+}
+
+table.heatmap tbody th {
+    color: var(--mist);
+    font-size: 1rem;
+    background: var(--surface);
+    border-left: 3px solid var(--fog);
+}
+
+table.heatmap tbody tr[data-valencia="baixa"] th {
+    border-left-color: var(--coral);
+}
+table.heatmap tbody tr[data-valencia="media"] th {
+    border-left-color: var(--beacon);
+}
+table.heatmap tbody tr[data-valencia="alta"] th {
+    border-left-color: var(--tide);
+}
+
+table.heatmap td.heat-cell {
+    font-family: var(--font-mono);
+    color: var(--mist);
+}
+
 /* ---------- Telas maiores ---------- */
+
 
 @media (min-width: 640px) {
     .nav-toggle {
