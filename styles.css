@@ -558,42 +558,29 @@ table.ledger.ledger--grid thead th {
 
 /* ---------- Insight card (padrão em destaque) ---------- */
 
-.insight-card {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 24px 22px;
-    text-align: center;
-    margin-top: 24px;
-}
-
-.insight-eyebrow {
-    margin: 0 0 10px;
-    font-size: 0.8rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--fog);
+.hero-value--text {
+    font-size: clamp(1.35rem, 6.5vw, 2rem);
+    line-height: 1.25;
 }
 
 .insight-emoji {
     font-size: 2.6rem;
     line-height: 1;
     display: block;
-    margin-bottom: 8px;
-}
-
-.insight-title {
-    font-family: var(--font-display);
-    font-size: clamp(1.3rem, 5.5vw, 1.7rem);
-    font-weight: 600;
-    color: var(--mist);
-    margin: 0 0 10px;
+    margin-bottom: 4px;
 }
 
 .insight-meta {
     font-family: var(--font-mono);
     font-size: 0.9rem;
     color: var(--beacon);
+    margin: 0;
+}
+
+.insight-submeta {
+    font-size: 0.78rem;
+    color: var(--fog);
+    margin: 6px 0 0;
 }
 
 .insight-empty {

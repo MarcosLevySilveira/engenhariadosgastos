@@ -45,7 +45,7 @@
             <button type="button" class="btn-ghost" onclick="carregarBaseCsvManual()">Carregar base do CSV</button>
         </div>
 
-        <section class="insight-card" id="insightCard">
+        <section class="hero-beacon" id="insightCard">
             <!-- preenchido via JS -->
         </section>
 
@@ -58,7 +58,7 @@
 
         <section class="charts-section">
             <h2>Distribuição visual</h2>
-            <div class="chart-card"><canvas id="bubbleChart" height="320"></canvas></div>
+            <div class="chart-card"><canvas id="bubbleChart" height="380"></canvas></div>
         </section>
     </main>
 
@@ -81,6 +81,15 @@
             "Setback evitável",
             "Arrependimento"
         ];
+
+        const tiposGastoAbrev = {
+            "Planejado": "Planejado",
+            "Pequeno impulso": "Peq. impulso",
+            "Grande impulso": "Gr. impulso",
+            "Setback não-evitável": "Setback N/E",
+            "Setback evitável": "Setback evit.",
+            "Arrependimento": "Arrependim."
+        };
 
         function carregarDados() {
             return JSON.parse(localStorage.getItem("despesas")) || [];
@@ -105,21 +114,27 @@
 
         function renderizarInsight(matriz) {
             const container = document.getElementById("insightCard");
+            container.classList.remove("is-positive", "is-negative");
 
-            let maior = { rsg: null, tipo: null, count: 0 };
-            let total = 0;
+            let totalGeral = 0;
+            let totalPlanejado = 0;
+            let maiorForaPlanejado = { rsg: null, tipo: null, count: 0 };
 
             rsgLevels.forEach(r => {
                 tiposGasto.forEach(t => {
                     const v = matriz[r][t];
-                    total += v;
-                    if (v > maior.count) maior = { rsg: r, tipo: t, count: v };
+                    totalGeral += v;
+                    if (t === "Planejado") {
+                        totalPlanejado += v;
+                    } else if (v > maiorForaPlanejado.count) {
+                        maiorForaPlanejado = { rsg: r, tipo: t, count: v };
+                    }
                 });
             });
 
-            if (total === 0 || maior.count === 0) {
+            if (totalGeral === 0) {
                 container.innerHTML = `
-                    <p class="insight-eyebrow">Padrão mais frequente</p>
+                    <p class="hero-eyebrow">Padrão mais frequente</p>
                     <p class="insight-empty">Ainda não há lançamentos com RSG e Tipo de Gasto preenchidos o suficiente
                     pra revelar um padrão aqui. Esse dado só existe pros gastos que você cadastra manualmente
                     (a base do CSV histórico não tem RSG). Cadastre alguns gastos com RSG pra começar a ver isso.</p>
@@ -127,30 +142,46 @@
                 return;
             }
 
-            const pct = ((maior.count / total) * 100).toFixed(0);
+            const totalForaPlanejado = totalGeral - totalPlanejado;
+            const pctPlanejado = ((totalPlanejado / totalGeral) * 100).toFixed(0);
+
+            if (totalForaPlanejado === 0 || maiorForaPlanejado.count === 0) {
+                container.innerHTML = `
+                    <p class="hero-eyebrow">Padrão mais frequente</p>
+                    <p class="hero-value hero-value--text">${pctPlanejado}% planejado</p>
+                    <div class="beacon-bar"><div class="beacon-glow"></div></div>
+                    <p class="insight-meta">Praticamente todos os gastos com RSG registrado até agora foram planejados —
+                    nenhum padrão de impulso ou arrependimento se destacou ainda.</p>
+                `;
+                return;
+            }
+
+            const pct = ((maiorForaPlanejado.count / totalForaPlanejado) * 100).toFixed(0);
 
             container.innerHTML = `
-                <p class="insight-eyebrow">Padrão mais frequente</p>
-                <span class="insight-emoji">${rsgEmojis[maior.rsg]}</span>
-                <p class="insight-title">${maior.tipo}</p>
-                <p class="insight-meta">${maior.count} ocorrência${maior.count === 1 ? '' : 's'} · ${pct}% dos gastos com RSG registrado</p>
+                <p class="hero-eyebrow">Reação mais comum a gastos fora do planejado</p>
+                <span class="insight-emoji">${rsgEmojis[maiorForaPlanejado.rsg]}</span>
+                <p class="hero-value hero-value--text">${maiorForaPlanejado.tipo}</p>
+                <div class="beacon-bar"><div class="beacon-glow"></div></div>
+                <p class="insight-meta">${maiorForaPlanejado.count} ocorrência${maiorForaPlanejado.count === 1 ? '' : 's'} ·
+                ${pct}% dos gastos fora do planejado</p>
+                <p class="insight-submeta">${pctPlanejado}% de tudo que você registrou com RSG foi planejado</p>
             `;
         }
 
         function renderizarHeatmap(matriz) {
-            const maxVal = Math.max(
-                1, ...rsgLevels.flatMap(r => tiposGasto.map(t => matriz[r][t]))
-            );
+            const valores = rsgLevels.flatMap(r => tiposGasto.map(t => matriz[r][t]));
+            const maxLog = Math.log1p(Math.max(1, ...valores));
 
             let html = `<thead><tr><th>RSG</th>`;
-            tiposGasto.forEach(t => html += `<th>${t}</th>`);
+            tiposGasto.forEach(t => html += `<th>${tiposGastoAbrev[t]}</th>`);
             html += `</tr></thead><tbody>`;
 
             rsgLevels.forEach(r => {
                 html += `<tr data-valencia="${rsgValencia[r]}"><th>${rsgEmojis[r]}<br>(${r})</th>`;
                 tiposGasto.forEach(t => {
                     const v = matriz[r][t];
-                    const proporcao = v / maxVal;
+                    const proporcao = v === 0 ? 0 : Math.log1p(v) / maxLog;
                     const alpha = v === 0 ? 0.05 : 0.12 + proporcao * 0.7;
                     const corTexto = proporcao > 0.55 ? "#21160a" : "var(--mist)";
                     html += `<td class="heat-cell" style="background: rgba(244,185,66,${alpha}); color:${corTexto};">${v}</td>`;
@@ -203,6 +234,10 @@
                             max: tiposGasto.length,
                             ticks: {
                                 color: '#93A8B8',
+                                autoSkip: false,
+                                maxRotation: 55,
+                                minRotation: 55,
+                                font: { size: 10 },
                                 callback: (val) => tiposGasto[val] || ""
                             },
                             grid: { color: 'rgba(147,168,184,0.12)' }
