@@ -584,7 +584,8 @@ table.ledger tr.row-sub td:first-child {
     color: var(--fog);
 }
 
-table.ledger tr.hidden {
+table.ledger tr.hidden,
+table.ledger.ledger--grid tr.hidden {
     display: none;
 }
 
