@@ -619,6 +619,78 @@ tfoot td {
     border-top: 2px solid var(--line);
 }
 
+/* ---------- DRE (Demonstração do Resultado) ---------- */
+
+.categoria-cell {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+table.ledger tr.dre-line td {
+    padding: 12px 14px;
+}
+
+table.ledger tr.dre-total td {
+    font-weight: 600;
+    background: var(--surface-raised);
+    padding: 13px 14px;
+}
+
+table.ledger tr.dre-total.is-positive td:last-child { color: var(--tide); }
+table.ledger tr.dre-total.is-negative td:last-child { color: var(--coral); }
+
+table.ledger tr.dre-memo td {
+    font-style: italic;
+    color: var(--fog);
+    background: var(--surface-alt);
+    font-size: 0.85rem;
+    padding: 10px 14px;
+}
+
+table.ledger tr.dre-items-row td {
+    background: var(--surface-alt);
+    padding: 0 14px 14px;
+}
+
+ul.dre-itens {
+    display: none;
+    flex-direction: column;
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+}
+
+ul.dre-itens li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--surface-raised);
+    font-size: 0.82rem;
+    color: var(--fog);
+}
+
+ul.dre-itens li:last-child { border-bottom: none; }
+
+ul.dre-itens .valor-mono {
+    font-family: var(--font-mono);
+    color: var(--mist);
+    white-space: nowrap;
+}
+
+.btn-toggle-itens {
+    background: transparent;
+    border: 1px solid var(--beacon);
+    color: var(--beacon);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.72rem;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
 /* ---------- Insight card (padrão em destaque) ---------- */
 
 .hero-value--text {

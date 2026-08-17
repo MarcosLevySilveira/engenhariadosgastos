@@ -3,223 +3,320 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DRE - Demonstração do Resultado</title>
+  <title>Lighthouse — Demonstração do Resultado (DRE)</title>
+  <link rel="stylesheet" href="styles.css">
 
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #ccc; padding: 8px; }
-    th { background: #f5f5f5; }
-    .categoria-cell {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-    }
-    .dropdown {
-      cursor: pointer;
-      background: #4CAF50;
-      color: white;
-      border: none;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-    }
-    .dropdown:hover { background: #45a049; }
-    .itens {
-      display: none;
-      font-size: 14px;
-      margin: 6px 0 0 16px;
-      list-style: none;
-      padding: 0;
-    }
-    .highlight {
-      font-weight: bold;
-      background: #e6f7ff;
-    }
-    .expand-all-btn {
-      background: #2196F3;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      margin-bottom: 12px;
-    }
-  </style>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0B1622">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <!-- Base de dados inicial (gerada a partir do CSV importado) -->
+  <script src="dados_iniciais.js"></script>
 </head>
 
-<body onload="renderDRE()">
+<body onload="init()">
 
-<h1>Demonstração do Resultado (DRE)</h1>
+  <header class="topbar">
+    <a href="index.html" class="wordmark">Lighthouse</a>
+    <button class="nav-toggle" id="navToggle" aria-controls="site-nav" aria-expanded="false">Menu</button>
+  </header>
 
-<label>Data inicial:</label>
-<input type="date" id="dataInicio" onchange="renderDRE()">
+  <nav id="site-nav" class="site-nav">
+    <a href="index.html">Tabela de Gastos</a>
+    <a href="cadastro4.html">Cadastrar Despesa/Entrada</a>
+    <a href="debts.html">Dívidas</a>
+    <a href="monthlyExpenses.html">Gastos Mensais</a>
+    <a href="monthlyexpensestransfer.html">Transferências Mensais</a>
+    <a href="mastermonthly.html">Gastos Macro</a>
+    <a href="mastermonthlytransfer.html">Transferências Macro</a>
+    <a href="dre.html" class="active">Despesas e receitas</a>
+    <a href="burnporsemana.html">Burn por semana</a>
+    <a href="exportpdf.html">Exportar PDF</a>
+    <a href="rsgDash.html">Dashboard RSG</a>
+    <a href="game.html">InvestGame</a>
+    <a href="portfolio.html">Portfolio</a>
+  </nav>
 
-<label>Data final:</label>
-<input type="date" id="dataFim" onchange="renderDRE()">
+  <main>
+    <div class="form-header">
+      <h1>Demonstração do Resultado (DRE)</h1>
+      <button type="button" class="btn-ghost" onclick="carregarBaseCsvManual()">Carregar base do CSV</button>
+    </div>
 
-<button class="expand-all-btn" onclick="toggleAllItens()">Expandir Tudo</button>
+    <details class="filter-panel">
+      <summary>Filtrar por período</summary>
+      <div class="filter-row">
+        <label>Data início
+          <input type="date" id="dataInicio" onchange="renderDRE()">
+        </label>
+        <label>Data fim
+          <input type="date" id="dataFim" onchange="renderDRE()">
+        </label>
+      </div>
+    </details>
 
-<table>
-  <thead>
-    <tr>
-      <th>Categoria</th>
-      <th>Valor (R$)</th>
-    </tr>
-  </thead>
-  <tbody id="dreBody"></tbody>
-</table>
+    <div class="form-header" style="margin-top:16px;">
+      <button type="button" class="btn-ghost" onclick="toggleAllItens()" id="expandAllBtn">Expandir tudo</button>
+    </div>
+
+    <section class="ledger-section">
+      <div class="ledger-wrap">
+        <table class="ledger ledger--grid">
+          <thead>
+            <tr>
+              <th>Categoria</th>
+              <th>Valor (R$)</th>
+            </tr>
+          </thead>
+          <tbody id="dreBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
 
 <script>
-let allExpanded = false;
+    document.getElementById("navToggle").addEventListener("click", function () {
+        const nav = document.getElementById("site-nav");
+        const aberto = nav.classList.toggle("open");
+        this.setAttribute("aria-expanded", aberto);
+    });
 
-// 🔥 CLASSIFICAÇÃO INTELIGENTE
-function mapearMacro(d) {
+    function formatarMoeda(valor) {
+        return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
 
-  if (d.tipo === "Entrada") return "Entradas";
+    let allExpanded = false;
 
-  // 🔒 Regras forçadas (prioridade máxima)
-  const fixasForcadas = ["Pensão", "Contador"];
-  if (fixasForcadas.includes(d.categoria)) {
-    return "Despesas Fixas";
-  }
+    /*
+      MODELO DO DRE PESSOAL — regras e por quê:
 
-  switch (d.categoriaMaster) {
+      1) Investimentos NÃO é despesa. É realocação de patrimônio (dinheiro que
+         muda de forma, não que sai da sua vida). Por isso não entra na conta
+         do Resultado Líquido — aparece só como linha informativa (memo) no fim,
+         mostrando quanto do resultado disponível foi direcionado a investir.
 
-    case "Moradia":
-    case "Saúde":
-    case "Educação":
-      return "Despesas Fixas";
+      2) "Dívidas e Obrigações" (empréstimos, financiamentos, pensão) e
+         "Impostos e Taxas" (IPVA, IPTU, impostos em geral) são coisas diferentes
+         e agora têm linhas próprias — antes tudo de "Dívidas e Obrigações"
+         virava uma linha chamada (erradamente) "Impostos e Taxas", e os
+         impostos de verdade caíam sem categoria em "Outros".
 
-    case "Alimentação":
-    case "Transporte":
-    case "Lazer":
-    case "Pessoal":
-    case "Conexão e prazer":
-      return "Despesas Variáveis";
+      3) Categorias de PJ (Tráfego Pago, Impostos PJ, PIX Conta PJ, Insumos
+         para Produção etc.) são despesas de negócio, não de vida pessoal —
+         agora ficam numa linha própria ("Despesas PJ") pra não distorcer o
+         resultado pessoal.
+    */
 
-    case "Dívidas e Obrigações":
-      return "Impostos e Taxas";
+    // 🔥 CLASSIFICAÇÃO INTELIGENTE
+    function mapearMacro(d) {
 
-    case "Investimentos":
-      return "Investimentos";
+      if (d.tipo === "Entrada") return "Entradas";
 
-    default:
-      return "Outros";
-  }
-}
+      const categoriaLower = (d.categoria || "").toLowerCase();
 
-function renderDRE() {
+      if (categoriaLower.includes("pj")) {
+        return "Despesas PJ";
+      }
 
-  const despesas = JSON.parse(localStorage.getItem("despesas")) || [];
-  const tbody = document.getElementById("dreBody");
-  tbody.innerHTML = "";
+      if (categoriaLower.includes("imposto") || categoriaLower.includes("ipva") ||
+          categoriaLower.includes("iptu") || categoriaLower.includes("taxas")) {
+        return "Impostos e Taxas";
+      }
 
-  const inicio = document.getElementById("dataInicio").value;
-  const fim = document.getElementById("dataFim").value;
+      const fixasForcadas = ["Pensão", "Contador"];
+      if (fixasForcadas.includes(d.categoria)) {
+        return "Despesas Fixas";
+      }
 
-  const filtradas = despesas.filter(d => {
+      switch (d.categoriaMaster) {
 
-    if (d.tipo === "Transferência") return false;
+        case "Moradia":
+        case "Saúde":
+        case "Educação":
+          return "Despesas Fixas";
 
-    if (inicio && d.data < inicio) return false;
-    if (fim && d.data > fim) return false;
+        case "Alimentação":
+        case "Transporte":
+        case "Lazer":
+        case "Pessoal":
+        case "Conexão e prazer":
+        case "Pets":
+        case "Evento único":
+        case "Despesas de Viagem a Trabalho":
+          return "Despesas Variáveis";
 
-    return true;
-  });
+        case "Dívidas e Obrigações":
+          return "Dívidas e Obrigações";
 
-  const categorias = {
-    "Entradas": [],
-    "Despesas Fixas": [],
-    "Despesas Variáveis": [],
-    "Investimentos": [],
-    "Impostos e Taxas": [],
-    "Outros": []
-  };
+        case "Investimentos":
+          return "Investimentos";
 
-  filtradas.forEach(d => {
-    const macro = mapearMacro(d);
-    categorias[macro].push(d);
-  });
+        case "Tráfego Pago":
+          return "Despesas PJ";
 
-  const soma = lista => lista.reduce((t, i) => t + i.valor, 0);
+        default:
+          return "Outros";
+      }
+    }
 
-  const entradas = soma(categorias["Entradas"]);
-  const fixas = soma(categorias["Despesas Fixas"]);
-  const variaveis = soma(categorias["Despesas Variáveis"]);
-  const investimentos = soma(categorias["Investimentos"]);
-  const impostos = soma(categorias["Impostos e Taxas"]);
-  const outros = soma(categorias["Outros"]);
+    function renderItens(itens, id) {
+        if (!itens.length) return "";
+        return `
+        <tr class="dre-items-row">
+            <td colspan="2">
+                <ul class="dre-itens" id="itens-${id}">
+                    ${itens.map(x => `
+                        <li>
+                            <span>${x.data} — ${x.descricao} <span style="color:var(--fog)">(${x.categoria})</span></span>
+                            <span class="valor-mono">R$ ${formatarMoeda(x.valor)}</span>
+                        </li>
+                    `).join("")}
+                </ul>
+            </td>
+        </tr>`;
+    }
 
-  const operacional = entradas - fixas - variaveis;
-  const liquido = operacional - investimentos - impostos - outros;
+    function renderDRE() {
 
-  const dre = [
-    { nome: "Receita Bruta", valor: entradas, itens: categorias["Entradas"] },
-    { nome: "(-) Despesas Fixas", valor: -fixas, itens: categorias["Despesas Fixas"] },
-    { nome: "(-) Despesas Variáveis", valor: -variaveis, itens: categorias["Despesas Variáveis"] },
-    { nome: "= Resultado Operacional", valor: operacional, itens: [] },
-    { nome: "(-) Investimentos", valor: -investimentos, itens: categorias["Investimentos"] },
-    { nome: "(-) Impostos e Taxas", valor: -impostos, itens: categorias["Impostos e Taxas"] },
-    { nome: "(-) Outros", valor: -outros, itens: categorias["Outros"] },
-    { nome: "= Resultado Líquido", valor: liquido, itens: [] }
-  ];
+      const despesas = JSON.parse(localStorage.getItem("despesas")) || [];
+      const tbody = document.getElementById("dreBody");
+      tbody.innerHTML = "";
 
-  dre.forEach((linha, i) => {
-    tbody.innerHTML += `
-      <tr>
-        <td class="categoria-cell ${linha.nome.startsWith('=') ? 'highlight' : ''}">
-          ${linha.nome}
-          ${linha.itens.length ? `<button class="dropdown" onclick="toggleItens(${i}, this)">Ver Itens</button>` : ""}
-        </td>
-        <td class="${linha.nome.startsWith('=') ? 'highlight' : ''}">
-          ${linha.valor.toFixed(2)}
-        </td>
-      </tr>
-      ${linha.itens.length ? `
-      <tr>
-        <td colspan="2">
-          <ul class="itens" id="itens-${i}">
-            ${linha.itens.map(x =>
-              `<li>${x.data} - ${x.descricao} (${x.categoria}) - R$ ${x.valor.toFixed(2)}</li>`
-            ).join("")}
-          </ul>
-        </td>
-      </tr>` : ""}
-    `;
-  });
+      const inicio = document.getElementById("dataInicio").value;
+      const fim = document.getElementById("dataFim").value;
 
-  const margem = entradas ? (liquido / entradas) * 100 : 0;
+      const filtradas = despesas.filter(d => {
+        if (d.tipo === "Transferência") return false;
+        if (inicio && d.data < inicio) return false;
+        if (fim && d.data > fim) return false;
+        return true;
+      });
 
-  tbody.innerHTML += `
-    <tr>
-      <td class="highlight">Margem (%)</td>
-      <td class="highlight">${margem.toFixed(2)}%</td>
-    </tr>
-  `;
+      const categorias = {
+        "Entradas": [],
+        "Despesas Fixas": [],
+        "Despesas Variáveis": [],
+        "Dívidas e Obrigações": [],
+        "Impostos e Taxas": [],
+        "Despesas PJ": [],
+        "Investimentos": [],
+        "Outros": []
+      };
 
-  allExpanded = false;
-}
+      filtradas.forEach(d => {
+        const macro = mapearMacro(d);
+        categorias[macro].push(d);
+      });
 
-function toggleItens(i, btn) {
-  const ul = document.getElementById(`itens-${i}`);
-  const aberto = ul.style.display === "block";
-  ul.style.display = aberto ? "none" : "block";
-  btn.textContent = aberto ? "Ver Itens" : "Ocultar Itens";
-}
+      const soma = lista => lista.reduce((t, i) => t + i.valor, 0);
 
-function toggleAllItens() {
-  allExpanded = !allExpanded;
+      const entradas = soma(categorias["Entradas"]);
+      const fixas = soma(categorias["Despesas Fixas"]);
+      const variaveis = soma(categorias["Despesas Variáveis"]);
+      const dividas = soma(categorias["Dívidas e Obrigações"]);
+      const impostos = soma(categorias["Impostos e Taxas"]);
+      const pj = soma(categorias["Despesas PJ"]);
+      const investimentos = soma(categorias["Investimentos"]);
+      const outros = soma(categorias["Outros"]);
 
-  document.querySelectorAll(".itens").forEach(ul => {
-    ul.style.display = allExpanded ? "block" : "none";
-  });
+      const operacional = entradas - fixas - variaveis;
+      const liquido = operacional - dividas - impostos - pj - outros;
 
-  document.querySelectorAll(".dropdown").forEach(btn => {
-    btn.textContent = allExpanded ? "Ocultar Itens" : "Ver Itens";
-  });
-}
+      const dre = [
+        { nome: "Receita Bruta", valor: entradas, itens: categorias["Entradas"] },
+        { nome: "(-) Despesas Fixas", valor: -fixas, itens: categorias["Despesas Fixas"] },
+        { nome: "(-) Despesas Variáveis", valor: -variaveis, itens: categorias["Despesas Variáveis"] },
+        { nome: "= Resultado Operacional", valor: operacional, itens: [], total: true },
+        { nome: "(-) Dívidas e Obrigações", valor: -dividas, itens: categorias["Dívidas e Obrigações"] },
+        { nome: "(-) Impostos e Taxas", valor: -impostos, itens: categorias["Impostos e Taxas"] },
+        { nome: "(-) Despesas PJ", valor: -pj, itens: categorias["Despesas PJ"] },
+        { nome: "(-) Outros", valor: -outros, itens: categorias["Outros"] },
+        { nome: "= Resultado Líquido", valor: liquido, itens: [], total: true }
+      ];
+
+      dre.forEach((linha, i) => {
+        const isTotal = !!linha.total;
+        const valencia = linha.valor >= 0 ? "is-positive" : "is-negative";
+        const rowClass = isTotal ? `dre-total ${valencia}` : "dre-line";
+
+        tbody.innerHTML += `
+          <tr class="${rowClass}">
+            <td class="categoria-cell">
+              ${linha.nome}
+              ${linha.itens.length ? `<button class="btn-toggle-itens" onclick="toggleItens(${i}, this)">Ver itens</button>` : ""}
+            </td>
+            <td>R$ ${formatarMoeda(linha.valor)}</td>
+          </tr>
+          ${renderItens(linha.itens, i)}
+        `;
+      });
+
+      const idxInvest = dre.length;
+      tbody.innerHTML += `
+        <tr class="dre-memo">
+          <td class="categoria-cell">
+            ↳ Investido no período (não reduz o resultado acima)
+            ${categorias["Investimentos"].length ? `<button class="btn-toggle-itens" onclick="toggleItens(${idxInvest}, this)">Ver itens</button>` : ""}
+          </td>
+          <td>R$ ${formatarMoeda(investimentos)}</td>
+        </tr>
+        ${renderItens(categorias["Investimentos"], idxInvest)}
+      `;
+
+      const margem = entradas ? (liquido / entradas) * 100 : 0;
+      const taxaInvestimento = entradas ? (investimentos / entradas) * 100 : 0;
+
+      tbody.innerHTML += `
+        <tr class="dre-total ${margem >= 0 ? 'is-positive' : 'is-negative'}">
+          <td>Margem Líquida (%)</td>
+          <td>${margem.toFixed(2)}%</td>
+        </tr>
+        <tr class="dre-memo">
+          <td>Taxa de investimento sobre a Receita Bruta</td>
+          <td>${taxaInvestimento.toFixed(2)}%</td>
+        </tr>
+      `;
+
+      allExpanded = false;
+      document.getElementById("expandAllBtn").textContent = "Expandir tudo";
+    }
+
+    function toggleItens(i, btn) {
+      const ul = document.getElementById(`itens-${i}`);
+      if (!ul) return;
+      const aberto = ul.style.display === "flex";
+      ul.style.display = aberto ? "none" : "flex";
+      btn.textContent = aberto ? "Ver itens" : "Ocultar itens";
+    }
+
+    function toggleAllItens() {
+      allExpanded = !allExpanded;
+
+      document.querySelectorAll(".dre-itens").forEach(ul => {
+        ul.style.display = allExpanded ? "flex" : "none";
+      });
+
+      document.querySelectorAll(".btn-toggle-itens").forEach(btn => {
+        btn.textContent = allExpanded ? "Ocultar itens" : "Ver itens";
+      });
+
+      document.getElementById("expandAllBtn").textContent = allExpanded ? "Recolher tudo" : "Expandir tudo";
+    }
+
+    function init() {
+        inicializarDadosLighthouse();
+        renderDRE();
+    }
+
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+            navigator.serviceWorker.register("sw.js")
+                .then((reg) => console.log("Service worker registrado:", reg.scope))
+                .catch((err) => console.warn("Falha ao registrar service worker:", err));
+        });
+    }
 </script>
 
 </body>
