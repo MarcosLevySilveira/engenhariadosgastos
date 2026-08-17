@@ -5,7 +5,7 @@
 // - Qualquer arquivo novo que o usuário visitar é armazenado no cache automaticamente
 //   (cache dinâmico), então não é preciso listar toda página do site aqui.
 
-const CACHE_VERSION = "lighthouse-v1";
+const CACHE_VERSION = "lighthouse-v2"; // <- versão trocada: força limpar o cache antigo (v1)
 
 // Arquivos essenciais pré-carregados na instalação.
 // Ajuste esta lista se você renomear/adicionar arquivos principais.
@@ -75,15 +75,16 @@ self.addEventListener("fetch", (event) => {
         return;
     }
 
-    // Cache-first para os demais recursos (css, js, imagens, etc.)
+    // Network-first para os demais recursos (css, js, imagens, etc.)
+    // Assim, sempre que o arquivo mudar no servidor, a próxima visita já
+    // pega a versão nova; só cai pro cache se estiver offline.
     event.respondWith(
-        caches.match(request).then((cacheada) => {
-            if (cacheada) return cacheada;
-            return fetch(request).then((resposta) => {
+        fetch(request)
+            .then((resposta) => {
                 const copia = resposta.clone();
                 caches.open(CACHE_VERSION).then((cache) => cache.put(request, copia));
                 return resposta;
-            });
-        })
+            })
+            .catch(() => caches.match(request))
     );
 });
