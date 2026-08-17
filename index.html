@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Finanças Pessoais</title>
+    <title>Lighthouse — Controle de Finanças Pessoais</title>
     <link rel="stylesheet" href="styles.css">
 
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0D1B2A">
+    <meta name="theme-color" content="#0B1622">
     <link rel="icon" href="icon-192.png">
     <link rel="apple-touch-icon" href="icon-192.png">
 
@@ -17,76 +17,109 @@
     <script src="dados_iniciais.js"></script>
 </head>
 <body>
-    <header>
-        <h1>Controle de Finanças Pessoais</h1>
+    <header class="topbar">
+        <a href="index.html" class="wordmark">Lighthouse</a>
+        <button class="nav-toggle" id="navToggle" aria-controls="site-nav" aria-expanded="false">Menu</button>
     </header>
 
-    <nav>
-            <a href="index.html" class="active">Antigo Dashboard</a>
-            <a href="index2.html">Novo dashboard</a>
-            <a href="cadastro4.html">Cadastrar Despesa/Entrada</a>
-            <a href="debts.html">Dívidas</a>
-            <a href="monthlyExpenses.html">Gastos Mensais</a>
-            <a href="dre.html">Despesas e receitas</a>
-            <a href="burnporsemana.html">Burn por semana</a>
-            <a href="exportpdf.html">Exportar PDF</a>
-            <a href="game.html">InvestGame</a>
-            <a href="portfolio.html">Portfolio</a>
-        </nav>
+    <nav id="site-nav" class="site-nav">
+        <a href="index.html" class="active">Antigo Dashboard</a>
+        <a href="index2.html">Novo dashboard</a>
+        <a href="cadastro4.html">Cadastrar Despesa/Entrada</a>
+        <a href="debts.html">Dívidas</a>
+        <a href="monthlyExpenses.html">Gastos Mensais</a>
+        <a href="dre.html">Despesas e receitas</a>
+        <a href="burnporsemana.html">Burn por semana</a>
+        <a href="exportpdf.html">Exportar PDF</a>
+        <a href="game.html">InvestGame</a>
+        <a href="portfolio.html">Portfolio</a>
+    </nav>
 
     <main>
-        <h2>Entradas e Saídas</h2>
-        
-        <div class="filtro-datas">
-            <label for="data-inicio">Data início:</label>
-            <input type="date" id="data-inicio">
-            <label for="data-fim">Data fim:</label>
-            <input type="date" id="data-fim">
-            <button onclick="atualizarTabela()">Filtrar</button>
-            <button type="button" onclick="carregarBaseCsvManual()">Carregar base do CSV</button>
+        <section class="hero-beacon" id="heroBeacon">
+            <p class="hero-eyebrow">Saldo do período</p>
+            <p class="hero-value" id="total-categorias">0,00</p>
+            <div class="beacon-bar"><div class="beacon-glow"></div></div>
+            <div class="stat-pills">
+                <div class="pill pill-in">
+                    <span>Entradas</span>
+                    <strong id="total-entradas">0,00</strong>
+                </div>
+                <div class="pill pill-out">
+                    <span>Saídas</span>
+                    <strong id="total-saidas">0,00</strong>
+                </div>
+            </div>
+        </section>
+
+        <details class="filter-panel">
+            <summary>Filtrar por período</summary>
+            <div class="filter-row">
+                <label>Data início
+                    <input type="date" id="data-inicio">
+                </label>
+                <label>Data fim
+                    <input type="date" id="data-fim">
+                </label>
+                <div class="filter-actions">
+                    <button class="btn-primary" onclick="atualizarTabela()">Filtrar</button>
+                    <button type="button" class="btn-ghost" onclick="carregarBaseCsvManual()">Carregar base do CSV</button>
+                </div>
+            </div>
+        </details>
+
+        <div class="category-columns">
+            <section class="category-section">
+                <h2>Entradas por categoria</h2>
+                <div id="cards-entradas" class="coast"></div>
+            </section>
+
+            <section class="category-section">
+                <h2>Saídas por categoria</h2>
+                <div id="cards-saidas" class="coast"></div>
+            </section>
         </div>
 
-        <div class="card-container">
-            <div class="card card-entrada">
-                <h3>Total Entradas</h3>
-                <p id="total-entradas">0,00</p>
+        <section class="ledger-section">
+            <h2>Lançamentos</h2>
+            <div class="ledger-wrap">
+                <table class="ledger">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Categoria</th>
+                            <th>Descrição</th>
+                            <th>Valor (R$)</th>
+                            <th>Tipo</th>
+                            <th>Saldo (R$)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-dados"></tbody>
+                </table>
             </div>
-            <div class="card card-saida">
-                <h3>Total Saídas</h3>
-                <p id="total-saidas">0,00</p>
-            </div>
-            <div class="card card-categorias">
-                <h3>Total Geral</h3>
-                <p id="total-categorias">0,00</p>
-            </div>
-        </div>
-        
-        <h2>Entradas</h2>
-        <div id="cards-entradas" class="card-container"></div>
-        <h2>Saídas</h2>
-        <div id="cards-saidas" class="card-container"></div>
+        </section>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>Data</th>
-                    <th>Categoria</th>
-                    <th>Descrição</th>
-                    <th>Valor (R$)</th>
-                    <th>Tipo</th>
-                    <th>Saldo (R$)</th>
-                </tr>
-            </thead>
-            <tbody id="tabela-dados"></tbody>
-        </table>
-
-        <canvas id="graficoEntradas" width="1600" height="800"></canvas>
-        <canvas id="graficoSaidas" width="1600" height="800"></canvas>
+        <section class="charts-section">
+            <h2>Gráfico de entradas</h2>
+            <div class="chart-card"><canvas id="graficoEntradas" height="260"></canvas></div>
+            <h2>Gráfico de saídas</h2>
+            <div class="chart-card"><canvas id="graficoSaidas" height="260"></canvas></div>
+        </section>
     </main>
 
     <script>
+        document.getElementById("navToggle").addEventListener("click", function () {
+            const nav = document.getElementById("site-nav");
+            const aberto = nav.classList.toggle("open");
+            this.setAttribute("aria-expanded", aberto);
+        });
+
         function carregarDespesas() {
             return JSON.parse(localStorage.getItem("despesas")) || [];
+        }
+
+        function formatarMoeda(valor) {
+            return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
         function atualizarTabela() {
@@ -94,7 +127,7 @@
             const tabela = document.getElementById("tabela-dados");
             const dataInicio = document.getElementById("data-inicio").value;
             const dataFim = document.getElementById("data-fim").value;
-            tabela.innerHTML = ""; // Limpa a tabela
+            tabela.innerHTML = "";
 
             let totalEntradas = 0;
             let totalSaidas = 0;
@@ -102,29 +135,16 @@
             const somatorioCategoriasSaida = {};
             let saldoAcumulado = 0;
 
-            // Filtrar despesas pelo período
             const despesasFiltradas = despesas.filter(despesa => {
                 const dataDespesa = new Date(despesa.data);
                 const inicio = dataInicio ? new Date(dataInicio) : null;
                 const fim = dataFim ? new Date(dataFim) : null;
-
                 return (!inicio || dataDespesa >= inicio) && (!fim || dataDespesa <= fim);
             });
 
             despesasFiltradas.forEach(despesa => {
-                const row = tabela.insertRow();
-                const cellData = row.insertCell(0);
-                const cellCategoria = row.insertCell(1);
-                const cellDescricao = row.insertCell(2);
-                const cellValor = row.insertCell(3);
-                const cellTipo = row.insertCell(4);
-                const cellSaldo = row.insertCell(5);
-
-                cellData.textContent = despesa.data;
-                cellCategoria.textContent = despesa.categoria;
-                cellDescricao.textContent = despesa.descricao;
-                cellValor.textContent = despesa.valor.toFixed(2);
-                cellTipo.textContent = despesa.tipo;
+                const row = document.createElement("tr");
+                row.setAttribute("data-tipo", despesa.tipo);
 
                 if (despesa.tipo === "Entrada") {
                     totalEntradas += despesa.valor;
@@ -136,72 +156,81 @@
                     somatorioCategoriasSaida[despesa.categoria] = (somatorioCategoriasSaida[despesa.categoria] || 0) + despesa.valor;
                 }
 
-                cellSaldo.textContent = saldoAcumulado.toFixed(2);
+                row.innerHTML = `
+                    <td data-label="Data">${despesa.data}</td>
+                    <td data-label="Categoria">${despesa.categoria}</td>
+                    <td data-label="Descrição">${despesa.descricao}</td>
+                    <td data-label="Valor (R$)">${formatarMoeda(despesa.valor)}</td>
+                    <td data-label="Tipo">${despesa.tipo}</td>
+                    <td data-label="Saldo (R$)">${formatarMoeda(saldoAcumulado)}</td>
+                `;
+                tabela.appendChild(row);
             });
 
-            document.getElementById("total-entradas").textContent = totalEntradas.toFixed(2);
-            document.getElementById("total-saidas").textContent = Math.abs(totalSaidas).toFixed(2);
-            document.getElementById("total-categorias").textContent = (totalEntradas - totalSaidas).toFixed(2);
+            document.getElementById("total-entradas").textContent = formatarMoeda(totalEntradas);
+            document.getElementById("total-saidas").textContent = formatarMoeda(Math.abs(totalSaidas));
 
-            const cardsEntradas = document.getElementById("cards-entradas");
-            const cardsSaidas = document.getElementById("cards-saidas");
+            const saldoTotal = totalEntradas - totalSaidas;
+            document.getElementById("total-categorias").textContent = formatarMoeda(saldoTotal);
 
-            cardsEntradas.innerHTML = "";
-            cardsSaidas.innerHTML = "";
+            const hero = document.getElementById("heroBeacon");
+            hero.classList.remove("is-positive", "is-negative");
+            hero.classList.add(saldoTotal >= 0 ? "is-positive" : "is-negative");
 
-            // Organiza as categorias de entrada
-            const categoriasEntradaOrdenadas = Object.entries(somatorioCategoriasEntrada)
-                .sort(([, valorA], [, valorB]) => valorB - valorA); // Ordenação decrescente
-            categoriasEntradaOrdenadas.forEach(([categoria, valor]) => {
-                const card = document.createElement("div");
-                card.className = "card card-categorias";
-                card.innerHTML = `<h3>${categoria}</h3><p>${valor.toFixed(2)}</p>`;
-                cardsEntradas.appendChild(card);
-            });
-
-            // Organiza as categorias de saída
-            const categoriasSaidaOrdenadas = Object.entries(somatorioCategoriasSaida)
-                .sort(([, valorA], [, valorB]) => valorB - valorA); // Ordenação decrescente
-            categoriasSaidaOrdenadas.forEach(([categoria, valor]) => {
-                const card = document.createElement("div");
-                card.className = "card card-categorias";
-                card.innerHTML = `<h3>${categoria}</h3><p>${valor.toFixed(2)}</p>`;
-                cardsSaidas.appendChild(card);
-            });
+            renderizarCoast("cards-entradas", somatorioCategoriasEntrada, "coast-in");
+            renderizarCoast("cards-saidas", somatorioCategoriasSaida, "coast-out");
 
             criarGraficoEntradas(somatorioCategoriasEntrada);
             criarGraficoSaidas(somatorioCategoriasSaida);
         }
 
+        function renderizarCoast(containerId, somatorio, modificador) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = "";
+
+            const entradas = Object.entries(somatorio).sort(([, a], [, b]) => b - a);
+            const maior = entradas.length ? entradas[0][1] : 1;
+
+            entradas.forEach(([categoria, valor]) => {
+                const largura = Math.max((valor / maior) * 100, 3);
+                const row = document.createElement("div");
+                row.className = "coast-row " + modificador;
+                row.innerHTML = `
+                    <div class="coast-label">
+                        <span class="coast-name">${categoria}</span>
+                        <span class="coast-value">R$ ${formatarMoeda(valor)}</span>
+                    </div>
+                    <div class="coast-track">
+                        <div class="coast-fill" style="width:${largura}%"></div>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
         function criarGraficoEntradas(categoriasEntrada) {
             const ctx = document.getElementById("graficoEntradas").getContext("2d");
-
-            // Ordenar as categorias por valor de forma decrescente
-            const categoriasOrdenadas = Object.entries(categoriasEntrada)
-                .sort(([, valorA], [, valorB]) => valorB - valorA); // Ordenação decrescente
-
-            // Obter os rótulos e valores das categorias ordenadas
+            const categoriasOrdenadas = Object.entries(categoriasEntrada).sort(([, a], [, b]) => b - a);
             const labels = categoriasOrdenadas.map(([categoria]) => categoria);
             const valores = categoriasOrdenadas.map(([, valor]) => valor);
 
-            new Chart(ctx, {
+            if (window._graficoEntradas) window._graficoEntradas.destroy();
+            window._graficoEntradas = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: labels,
                     datasets: [{
                         label: 'Entradas (R$)',
                         data: valores,
-                        backgroundColor: 'green',
-                        borderColor: 'black',
-                        borderWidth: 1
+                        backgroundColor: '#2FBF8F',
+                        borderRadius: 4
                     }]
                 },
                 options: {
+                    plugins: { legend: { labels: { color: '#93A8B8' } } },
                     scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: { display: true, text: 'Valor (R$)' }
-                        }
+                        x: { ticks: { color: '#93A8B8' }, grid: { color: 'rgba(147,168,184,0.12)' } },
+                        y: { beginAtZero: true, ticks: { color: '#93A8B8' }, grid: { color: 'rgba(147,168,184,0.12)' } }
                     }
                 }
             });
@@ -209,40 +238,34 @@
 
         function criarGraficoSaidas(categoriasSaida) {
             const ctx = document.getElementById("graficoSaidas").getContext("2d");
-
-            // Ordenar as categorias por valor de forma decrescente
-            const categoriasOrdenadas = Object.entries(categoriasSaida)
-                .sort(([, valorA], [, valorB]) => valorB - valorA); // Ordenação decrescente
-
-            // Obter os rótulos e valores das categorias ordenadas
+            const categoriasOrdenadas = Object.entries(categoriasSaida).sort(([, a], [, b]) => b - a);
             const labels = categoriasOrdenadas.map(([categoria]) => categoria);
             const valores = categoriasOrdenadas.map(([, valor]) => valor);
 
-            new Chart(ctx, {
+            if (window._graficoSaidas) window._graficoSaidas.destroy();
+            window._graficoSaidas = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: labels,
                     datasets: [{
                         label: 'Saídas (R$)',
                         data: valores,
-                        backgroundColor: 'red',
-                        borderColor: 'black',
-                        borderWidth: 1
+                        backgroundColor: '#F0655B',
+                        borderRadius: 4
                     }]
                 },
                 options: {
+                    plugins: { legend: { labels: { color: '#93A8B8' } } },
                     scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: { display: true, text: 'Valor (R$)' }
-                        }
+                        x: { ticks: { color: '#93A8B8' }, grid: { color: 'rgba(147,168,184,0.12)' } },
+                        y: { beginAtZero: true, ticks: { color: '#93A8B8' }, grid: { color: 'rgba(147,168,184,0.12)' } }
                     }
                 }
             });
         }
 
         window.onload = function () {
-            inicializarDadosLighthouse(); // carrega o CSV base no localStorage, se ainda não houver dados
+            inicializarDadosLighthouse();
             atualizarTabela();
         };
 
