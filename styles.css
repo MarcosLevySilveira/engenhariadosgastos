@@ -522,6 +522,40 @@ table.ledger tr[data-tipo="Saída"] td[data-label="Valor (R$)"] {
     height: auto !important;
 }
 
+/* ---------- Modificador: tabela sempre em grade (não empilha no celular) ----------
+   Usar quando comparar colunas lado a lado (ex: meses) importa mais do que
+   economizar espaço vertical. Aplica em qualquer largura de tela. */
+
+table.ledger.ledger--grid thead {
+    display: table-header-group;
+}
+
+table.ledger.ledger--grid tbody tr {
+    display: table-row;
+    padding: 0;
+}
+
+table.ledger.ledger--grid td {
+    display: table-cell;
+    padding: 10px 14px;
+    white-space: nowrap;
+}
+
+table.ledger.ledger--grid td::before {
+    content: none;
+}
+
+table.ledger.ledger--grid thead th {
+    text-align: left;
+    padding: 12px 14px;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--fog);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+}
+
 /* ---------- Telas maiores ---------- */
 
 @media (min-width: 640px) {

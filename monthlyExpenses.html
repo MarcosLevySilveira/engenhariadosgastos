@@ -3,115 +3,158 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Gastos por Categoria e Mês</title>
+  <title>Lighthouse — Gastos por Categoria e Mês</title>
   <link rel="stylesheet" href="styles.css">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0B1622">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <!-- Base de dados inicial (gerada a partir do CSV importado) -->
+  <script src="dados_iniciais.js"></script>
 </head>
 <body>
-  <header>
-    <h1>Gastos por Categoria e Mês</h1>
+  <header class="topbar">
+    <a href="index.html" class="wordmark">Lighthouse</a>
+    <button class="nav-toggle" id="navToggle" aria-controls="site-nav" aria-expanded="false">Menu</button>
   </header>
-    <nav>
+
+  <nav id="site-nav" class="site-nav">
     <a href="index.html">Tabela de Gastos</a>
-        <a href="index.html">Tabela de Gastos</a>
-        <a href="cadastro4.html" class="active">Cadastrar Despesa/Entrada</a>
-        <a href="debts.html">Dívidas</a>
-        <a href="monthlyExpenses.html">Gastos Mensais</a>
-        <a href="monthlyexpensestransfer.html">Transferências Mensais</a>
-        <a href="mastermonthly.html">Gastos Macro</a>
-        <a href="mastermonthlytransfer.html">Transferências Macro</a>
-        <a href="dre.html">Despesas e receitas</a>
-        <a href="burnporsemana.html">Burn por semana</a>
-        <a href="exportpdf.html">Exportar PDF</a>
-        <a href="game.html">InvestGame</a>
-        <a href="portfolio.html">Portfolio</a>
-    </nav>
+    <a href="cadastro4.html">Cadastrar Despesa/Entrada</a>
+    <a href="debts.html">Dívidas</a>
+    <a href="monthlyExpenses.html">Gastos Mensais</a>
+    <a href="monthlyexpensestransfer.html">Transferências Mensais</a>
+    <a href="mastermonthly.html">Gastos Macro</a>
+    <a href="mastermonthlytransfer.html">Transferências Macro</a>
+    <a href="dre.html">Despesas e receitas</a>
+    <a href="burnporsemana.html">Burn por semana</a>
+    <a href="exportpdf.html">Exportar PDF</a>
+    <a href="game.html">InvestGame</a>
+    <a href="portfolio.html">Portfolio</a>
+  </nav>
+
   <main>
-    <table>
-      <thead id="cabecalho-tabela"></thead>
-      <tbody id="corpo-tabela"></tbody>
-      <tfoot id="rodape-tabela"></tfoot>
-    </table>
+    <div class="form-header">
+      <h1>Gastos por categoria e mês</h1>
+      <button type="button" class="btn-ghost" onclick="carregarBaseCsvManual()">Carregar base do CSV</button>
+    </div>
+
+    <section class="ledger-section">
+      <div class="ledger-wrap">
+        <table class="ledger ledger--grid">
+          <thead id="cabecalho-tabela"></thead>
+          <tbody id="corpo-tabela"></tbody>
+          <tfoot id="rodape-tabela"></tfoot>
+        </table>
+      </div>
+    </section>
   </main>
 
   <script>
+    document.getElementById("navToggle").addEventListener("click", function () {
+        const nav = document.getElementById("site-nav");
+        const aberto = nav.classList.toggle("open");
+        this.setAttribute("aria-expanded", aberto);
+    });
+
+    function formatarMoeda(valor) {
+        return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
     function carregarDespesas() {
       return JSON.parse(localStorage.getItem("despesas")) || [];
     }
 
     function agruparDespesasPorCategoriaEMes(despesas) {
-  const dados = {};
-  const mesesSet = new Set();
+      const dados = {};
+      const mesesSet = new Set();
 
-  despesas.forEach(d => {
-    if (d.tipo !== "Saída") return;
+      despesas.forEach(d => {
+        if (d.tipo !== "Saída") return;
 
-    const data = new Date(d.data);
-    // Pega mês no formato ISO yyyy-mm, para ordenar cronologicamente
-    const mes = data.toISOString().slice(0,7); // "2025-05"
-    mesesSet.add(mes);
+        const data = new Date(d.data);
+        const mes = data.toISOString().slice(0,7); // "2025-05"
+        mesesSet.add(mes);
 
-    if (!dados[d.categoria]) dados[d.categoria] = {};
-    if (!dados[d.categoria][mes]) dados[d.categoria][mes] = 0;
+        if (!dados[d.categoria]) dados[d.categoria] = {};
+        if (!dados[d.categoria][mes]) dados[d.categoria][mes] = 0;
 
-    dados[d.categoria][mes] += d.valor;
-  });
+        dados[d.categoria][mes] += d.valor;
+      });
 
-  const mesesOrdenados = Array.from(mesesSet).sort(); // ordena corretamente yyyy-mm
-  return { dados, meses: mesesOrdenados };
-}
+      const mesesOrdenados = Array.from(mesesSet).sort();
+      return { dados, meses: mesesOrdenados };
+    }
 
-  function montarTabela({ dados, meses }) {
-  const cabecalho = document.getElementById("cabecalho-tabela");
-  const corpo = document.getElementById("corpo-tabela");
-  const rodape = document.getElementById("rodape-tabela");
+    function montarTabela({ dados, meses }) {
+      const cabecalho = document.getElementById("cabecalho-tabela");
+      const corpo = document.getElementById("corpo-tabela");
+      const rodape = document.getElementById("rodape-tabela");
+      cabecalho.innerHTML = "";
+      corpo.innerHTML = "";
+      rodape.innerHTML = "";
 
-  // Formata os meses para 'Jan/25', 'Fev/25', etc.
-  const mesesFormatados = meses.map(m => {
-    const [ano, mes] = m.split("-");
-    const data = new Date(ano, mes - 1);
-    return data.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
-  });
+      const mesesFormatados = meses.map(m => {
+        const [ano, mes] = m.split("-");
+        const data = new Date(ano, mes - 1);
+        return data.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
+      });
 
-  // Cabeçalho
-  const trCabecalho = document.createElement("tr");
-  trCabecalho.innerHTML = `<th>Categoria</th>` + mesesFormatados.map(m => `<th>${m}</th>`).join("") + `<th>Total</th>`;
-  cabecalho.appendChild(trCabecalho);
+      const rotulos = ["Categoria", ...mesesFormatados, "Total"];
 
-  // Organiza categorias com total
-  const categoriasOrdenadas = Object.entries(dados)
-    .map(([categoria, valoresPorMes]) => {
-      const total = meses.reduce((soma, mes) => soma + (valoresPorMes[mes] || 0), 0);
-      return { categoria, valoresPorMes, total };
-    })
-    .sort((a, b) => b.total - a.total); // Ordenar do maior para o menor
+      // Cabeçalho
+      const trCabecalho = document.createElement("tr");
+      trCabecalho.innerHTML = rotulos.map(r => `<th>${r}</th>`).join("");
+      cabecalho.appendChild(trCabecalho);
 
-  // Inicializa totais por mês
-  const totaisPorMes = Array(meses.length).fill(0);
+      const categoriasOrdenadas = Object.entries(dados)
+        .map(([categoria, valoresPorMes]) => {
+          const total = meses.reduce((soma, mes) => soma + (valoresPorMes[mes] || 0), 0);
+          return { categoria, valoresPorMes, total };
+        })
+        .sort((a, b) => b.total - a.total);
 
-  // Corpo da tabela
-  categoriasOrdenadas.forEach(({ categoria, valoresPorMes, total }) => {
-    const tr = document.createElement("tr");
-    const colunas = meses.map((m, i) => {
-      const valor = valoresPorMes[m] || 0;
-      totaisPorMes[i] += valor;
-      return `<td>R$ ${valor.toFixed(2)}</td>`;
-    });
-    tr.innerHTML = `<td>${categoria}</td>` + colunas.join("") + `<td><strong>R$ ${total.toFixed(2)}</strong></td>`;
-    corpo.appendChild(tr);
-  });
+      const totaisPorMes = Array(meses.length).fill(0);
 
-  // Rodapé
-  const trRodape = document.createElement("tr");
-  trRodape.innerHTML = `<td><strong>Total por mês</strong></td>` +
-    totaisPorMes.map(v => `<td><strong>R$ ${v.toFixed(2)}</strong></td>`).join("") +
-    `<td></td>`;
-  rodape.appendChild(trRodape);
-}
+      categoriasOrdenadas.forEach(({ categoria, valoresPorMes, total }) => {
+        const tr = document.createElement("tr");
+        let linha = `<td data-label="${rotulos[0]}">${categoria}</td>`;
+        meses.forEach((m, i) => {
+          const valor = valoresPorMes[m] || 0;
+          totaisPorMes[i] += valor;
+          linha += `<td data-label="${rotulos[i + 1]}">R$ ${formatarMoeda(valor)}</td>`;
+        });
+        linha += `<td data-label="Total"><strong>R$ ${formatarMoeda(total)}</strong></td>`;
+        tr.innerHTML = linha;
+        corpo.appendChild(tr);
+      });
+
+      const trRodape = document.createElement("tr");
+      let linhaRodape = `<td data-label="Categoria"><strong>Total por mês</strong></td>`;
+      totaisPorMes.forEach((v, i) => {
+        linhaRodape += `<td data-label="${rotulos[i + 1]}"><strong>R$ ${formatarMoeda(v)}</strong></td>`;
+      });
+      linhaRodape += `<td data-label="Total"></td>`;
+      trRodape.innerHTML = linhaRodape;
+      rodape.appendChild(trRodape);
+    }
 
     window.onload = () => {
+      inicializarDadosLighthouse();
       const despesas = carregarDespesas();
       const agrupado = agruparDespesasPorCategoriaEMes(despesas);
       montarTabela(agrupado);
+    }
+
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+            navigator.serviceWorker.register("sw.js")
+                .then((reg) => console.log("Service worker registrado:", reg.scope))
+                .catch((err) => console.warn("Falha ao registrar service worker:", err));
+        });
     }
   </script>
 </body>
