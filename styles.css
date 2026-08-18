@@ -135,6 +135,7 @@ button, input, select {
 }
 
 .site-nav a {
+    display: block;
     padding: 12px 20px;
     text-decoration: none;
     font-size: 0.92rem;
@@ -145,6 +146,24 @@ button, input, select {
 .site-nav a.active {
     color: var(--beacon);
     font-weight: 600;
+}
+
+.nav-group-title {
+    padding: 14px 20px 4px;
+    margin: 0;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--beacon);
+    border-top: 1px solid var(--line);
+}
+
+.nav-group:first-child .nav-group-title {
+    border-top: none;
+}
+
+.nav-group a:first-of-type {
+    border-top: none;
 }
 
 /* ---------- Layout base ---------- */
@@ -734,6 +753,93 @@ ul.dre-itens .valor-mono {
     flex-shrink: 0;
 }
 
+/* ---------- Dashboard Inteligente (gatilhos.html) ---------- */
+
+.range-controls {
+    display: flex;
+    gap: 8px;
+    margin: 16px 0 20px;
+    flex-wrap: wrap;
+}
+
+.range-btn {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--fog);
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-size: 0.82rem;
+    cursor: pointer;
+}
+
+.range-btn.active {
+    background: var(--beacon);
+    border-color: var(--beacon);
+    color: #21160a;
+    font-weight: 600;
+}
+
+.insight-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+}
+
+.insight-card-box {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+}
+
+.insight-card-box h3 {
+    font-family: var(--font-body);
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--mist);
+    margin: 0 0 8px;
+}
+
+.insight-card-value {
+    font-family: var(--font-mono);
+    font-size: 0.92rem;
+    color: var(--beacon);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.insight-card-caption {
+    display: block;
+    font-family: var(--font-body);
+    font-size: 0.76rem;
+    color: var(--fog);
+    margin-top: 4px;
+}
+
+.insight-card-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.insight-card-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--surface-alt);
+    font-size: 0.85rem;
+    color: var(--mist);
+}
+
+.insight-card-list li:last-child { border-bottom: none; }
+
+.insight-card-list .valor-mono {
+    font-family: var(--font-mono);
+    color: var(--fog);
+    white-space: nowrap;
+}
+
 /* ---------- Insight card (padrão em destaque) ---------- */
 
 .hero-value--text {
@@ -827,12 +933,24 @@ table.heatmap td.heat-cell {
         display: flex !important;
         flex-direction: row;
         flex-wrap: wrap;
+        align-items: flex-start;
         position: static;
+    }
+
+    .nav-group {
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid var(--line);
+        padding: 6px 0;
     }
 
     .site-nav a {
         border-top: none;
-        border-right: 1px solid var(--line);
+    }
+
+    .nav-group-title {
+        border-top: none;
+        padding: 8px 20px 4px;
     }
 }
 
@@ -849,6 +967,10 @@ table.heatmap td.heat-cell {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 20px;
+    }
+
+    .insight-grid {
+        grid-template-columns: 1fr 1fr;
     }
 
     table.ledger thead {
