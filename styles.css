@@ -132,6 +132,9 @@ button, input, select {
 
 .site-nav.open {
     display: flex;
+    max-height: calc(100vh - 57px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .site-nav a {
