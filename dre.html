@@ -63,13 +63,7 @@
 
     <section class="ledger-section">
       <div class="ledger-wrap">
-        <table class="ledger">
-          <thead>
-            <tr>
-              <th>Categoria</th>
-              <th>Valor (R$)</th>
-            </tr>
-          </thead>
+        <table class="dre-table">
           <tbody id="dreBody"></tbody>
         </table>
       </div>
@@ -243,11 +237,15 @@
 
         tbody.innerHTML += `
           <tr class="${rowClass}">
-            <td class="categoria-cell" data-label="Categoria">
-              ${linha.nome}
-              ${linha.itens.length ? `<button class="btn-toggle-itens" onclick="toggleItens(${i}, this)">Ver itens</button>` : ""}
+            <td colspan="2">
+              <div class="dre-row">
+                <span class="dre-row-label">
+                  ${linha.nome}
+                  ${linha.itens.length ? `<button class="btn-toggle-itens" onclick="toggleItens(${i}, this)">Ver itens</button>` : ""}
+                </span>
+                <span class="dre-row-value">R$ ${formatarMoeda(linha.valor)}</span>
+              </div>
             </td>
-            <td data-label="Valor (R$)">R$ ${formatarMoeda(linha.valor)}</td>
           </tr>
           ${renderItens(linha.itens, i)}
         `;
@@ -256,11 +254,15 @@
       const idxInvest = dre.length;
       tbody.innerHTML += `
         <tr class="dre-memo">
-          <td class="categoria-cell" data-label="Categoria">
-            ↳ Investido no período (não reduz o resultado acima)
-            ${categorias["Investimentos"].length ? `<button class="btn-toggle-itens" onclick="toggleItens(${idxInvest}, this)">Ver itens</button>` : ""}
+          <td colspan="2">
+            <div class="dre-row">
+              <span class="dre-row-label">
+                ↳ Investido no período (não reduz o resultado acima)
+                ${categorias["Investimentos"].length ? `<button class="btn-toggle-itens" onclick="toggleItens(${idxInvest}, this)">Ver itens</button>` : ""}
+              </span>
+              <span class="dre-row-value">R$ ${formatarMoeda(investimentos)}</span>
+            </div>
           </td>
-          <td data-label="Valor (R$)">R$ ${formatarMoeda(investimentos)}</td>
         </tr>
         ${renderItens(categorias["Investimentos"], idxInvest)}
       `;
@@ -270,12 +272,20 @@
 
       tbody.innerHTML += `
         <tr class="dre-total ${margem >= 0 ? 'is-positive' : 'is-negative'}">
-          <td data-label="Categoria">Margem Líquida (%)</td>
-          <td data-label="Valor (R$)">${margem.toFixed(2)}%</td>
+          <td colspan="2">
+            <div class="dre-row">
+              <span class="dre-row-label">Margem Líquida (%)</span>
+              <span class="dre-row-value">${margem.toFixed(2)}%</span>
+            </div>
+          </td>
         </tr>
         <tr class="dre-memo">
-          <td data-label="Categoria">Taxa de investimento sobre a Receita Bruta</td>
-          <td data-label="Valor (R$)">${taxaInvestimento.toFixed(2)}%</td>
+          <td colspan="2">
+            <div class="dre-row">
+              <span class="dre-row-label">Taxa de investimento sobre a Receita Bruta</span>
+              <span class="dre-row-value">${taxaInvestimento.toFixed(2)}%</span>
+            </div>
+          </td>
         </tr>
       `;
 

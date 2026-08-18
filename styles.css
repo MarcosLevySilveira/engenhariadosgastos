@@ -619,37 +619,80 @@ tfoot td {
     border-top: 2px solid var(--line);
 }
 
-/* ---------- DRE (Demonstração do Resultado) ---------- */
+/* ---------- DRE (Demonstração do Resultado) ----------
+   Estrutura própria (não usa .ledger/.ledger--grid): cada linha é um único
+   <td colspan="2"> com um flex-row dentro. Isso garante que nunca precise
+   de scroll lateral, mesmo com categorias de nome longo ou botão "Ver itens". */
 
-.categoria-cell {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
+table.dre-table {
+    width: 100%;
+    border-collapse: collapse;
 }
 
-table.ledger tr.dre-line td {
+table.dre-table tbody tr {
+    border-bottom: 1px solid var(--line);
+}
+
+table.dre-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+table.dre-table td {
+    border: none;
+    padding: 0;
+}
+
+.dre-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px 12px;
     padding: 12px 14px;
 }
 
-table.ledger tr.dre-total td {
-    font-weight: 600;
-    background: var(--surface-raised);
-    padding: 13px 14px;
+.dre-row-label {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.9rem;
+    color: var(--mist);
 }
 
-table.ledger tr.dre-total.is-positive td:last-child { color: var(--tide); }
-table.ledger tr.dre-total.is-negative td:last-child { color: var(--coral); }
+.dre-row-value {
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    color: var(--mist);
+    white-space: nowrap;
+}
 
-table.ledger tr.dre-memo td {
+tr.dre-total .dre-row {
+    background: var(--surface-raised);
+}
+
+tr.dre-total .dre-row-label,
+tr.dre-total .dre-row-value {
+    font-weight: 600;
+}
+
+tr.dre-total.is-positive .dre-row-value { color: var(--tide); }
+tr.dre-total.is-negative .dre-row-value { color: var(--coral); }
+
+tr.dre-memo .dre-row {
+    background: var(--surface-alt);
+}
+
+tr.dre-memo .dre-row-label,
+tr.dre-memo .dre-row-value {
     font-style: italic;
     color: var(--fog);
-    background: var(--surface-alt);
     font-size: 0.85rem;
-    padding: 10px 14px;
 }
 
-table.ledger tr.dre-items-row td {
+tr.dre-items-row td {
     background: var(--surface-alt);
     padding: 0 14px 14px;
 }
