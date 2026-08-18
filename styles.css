@@ -931,26 +931,9 @@ table.heatmap td.heat-cell {
 
     .site-nav {
         display: flex !important;
-        flex-direction: row;
-        flex-wrap: wrap;
-        align-items: flex-start;
-        position: static;
-    }
-
-    .nav-group {
-        display: flex;
         flex-direction: column;
-        border-right: 1px solid var(--line);
-        padding: 6px 0;
-    }
-
-    .site-nav a {
-        border-top: none;
-    }
-
-    .nav-group-title {
-        border-top: none;
-        padding: 8px 20px 4px;
+        position: static;
+        max-width: 360px;
     }
 }
 
