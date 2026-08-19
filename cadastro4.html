@@ -69,6 +69,121 @@
 
         const NIVEL_LIMIARES = { 2: 50, 3: 150, 4: 300 };
 
+        const MICRO_CATEGORIAS = [
+            { value: "Água", label: "Água" },
+            { value: "Air BNB", label: "Air BNB" },
+            { value: "Aluguel", label: "Aluguel" },
+            { value: "Aluguel Imovel 2", label: "Aluguel (Imóvel 2)" },
+            { value: "Aluguel Imovel 3", label: "Aluguel (Imóvel 3)" },
+            { value: "Aluguel Imovel 4", label: "Aluguel (Imóvel 4)" },
+            { value: "Alvará", label: "Alvará" },
+            { value: "Amazon", label: "Amazon" },
+            { value: "Assinaturas de aplicativos", label: "Assinaturas de aplicativos" },
+            { value: "Cartão de Crédito", label: "Cartão de Crédito" },
+            { value: "Bitcoin", label: "Bitcoin" },
+            { value: "Boliche", label: "Boliche" },
+            { value: "Bolos", label: "Bolos" },
+            { value: "Caixinha Nubank", label: "Caixinha Nubank" },
+            { value: "Caixinha Nubank - Aluguel", label: "Caixinha Nubank - Rendimentos Aluguel" },
+            { value: "Caixinha Nubank - Meta 2", label: "Caixinha Nubank - Meta 2" },
+            { value: "Claude AI", label: "Claude AI" },
+            { value: "Aporte em Investimentos", label: "Aporte em Investimentos" },
+            { value: "Rendimentos de Investimentos", label: "Rendimentos de Investimentos" },
+            { value: "Consórcio", label: "Consórcio" },
+            { value: "Calçados", label: "Calçados" },
+            { value: "Contador", label: "Contador" },
+            { value: "Congressos", label: "Congressos" },
+            { value: "Cursos", label: "Cursos" },
+            { value: "Celular BR", label: "Celular BR" },
+            { value: "Celular CA", label: "Celular CA" },
+            { value: "Chocolateria", label: "Chocolateria" },
+            { value: "Cinema", label: "Cinema" },
+            { value: "Coffe Shop", label: "Coffee Shop" },
+            { value: "Cosméticos", label: "Cosméticos" },
+            { value: "Delivery Food", label: "Delivery Food" },
+            { value: "Diarista", label: "Diarista" },
+            { value: "Distribuidora", label: "Distribuidora" },
+            { value: "Dízimo", label: "Dízimo" },
+            { value: "Doceria", label: "Doceria" },
+            { value: "Drogaria", label: "Drogaria" },
+            { value: "Educação", label: "Educação" },
+            { value: "Eletrônicos", label: "Eletrônicos" },
+            { value: "Empréstimos", label: "Empréstimos" },
+            { value: "Exames e concursos", label: "Exames e concursos" },
+            { value: "Faculdade", label: "Faculdade" },
+            { value: "Férias", label: "Férias" },
+            { value: "Financiamento Imobiliario", label: "Financiamento Imobiliário" },
+            { value: "FGTS", label: "FGTS" },
+            { value: "FIES", label: "FIES" },
+            { value: "F1 game", label: "F1 game" },
+            { value: "F1 TV", label: "F1 TV" },
+            { value: "Games", label: "Games" },
+            { value: "Impostos", label: "Impostos" },
+            { value: "Impostos PJ", label: "Impostos PJ" },
+            { value: "Impostos PJ Simples Nacional", label: "Impostos PJ Simples Nacional" },
+            { value: "Insumos para Produção", label: "Insumos para Produção" },
+            { value: "Internet", label: "Internet" },
+            { value: "Investimentos", label: "Investimentos" },
+            { value: "IPVA", label: "IPVA" },
+            { value: "IPTU", label: "IPTU" },
+            { value: "Hospedagens AIRBNB", label: "Hospedagens/AIRBNB" },
+            { value: "Lavanderia", label: "Lavanderia" },
+            { value: "Lava-jato", label: "Lava-jato" },
+            { value: "Lanche e Fast-food", label: "Lanche e Fast-food" },
+            { value: "Livros", label: "Livros" },
+            { value: "Limpeza", label: "Limpeza" },
+            { value: "Luz", label: "Luz" },
+            { value: "Manutenção Casa", label: "Manutenção Casa" },
+            { value: "Manutenção do Carro", label: "Manutenção do Carro" },
+            { value: "META Ads", label: "META Ads" },
+            { value: "Metrô", label: "Metrô" },
+            { value: "Mobília e utensílios", label: "Mobília e utensílios" },
+            { value: "Ofertas", label: "Ofertas" },
+            { value: "Óticas", label: "Óticas" },
+            { value: "Padaria", label: "Padaria" },
+            { value: "Papelaria", label: "Papelaria" },
+            { value: "Passagem aérea", label: "Passagem aérea" },
+            { value: "Plano de Saúde", label: "Plano de Saúde" },
+            { value: "PLR", label: "PLR" },
+            { value: "Pensão", label: "Pensão" },
+            { value: "Pet Shop", label: "Pet Shop" },
+            { value: "PIX Conta PJ", label: "PIX Conta PJ" },
+            { value: "PIX Conjuge", label: "PIX Cônjuge/Parceiro(a)" },
+            { value: "PIX Familia", label: "PIX Família" },
+            { value: "Passeios e expedições", label: "Passeios e expedições" },
+            { value: "Poupança", label: "Poupança" },
+            { value: "Pós-Graduação", label: "Pós-Graduação" },
+            { value: "Posto de Gasolina", label: "Posto de Gasolina" },
+            { value: "Presentes", label: "Presentes" },
+            { value: "Renovar CNH", label: "Renovar CNH" },
+            { value: "Renovar visto", label: "Renovar visto" },
+            { value: "Restaurantes", label: "Restaurantes" },
+            { value: "Reembolso de despesas", label: "Reembolso de despesas" },
+            { value: "Roupas", label: "Roupas" },
+            { value: "Salário", label: "Salário" },
+            { value: "Serasa", label: "Serasa" },
+            { value: "Salão de beleza", label: "Salão de beleza" },
+            { value: "Seguro desemprego", label: "Seguro desemprego" },
+            { value: "Seguro do Carro", label: "Seguro do Carro" },
+            { value: "Shopping", label: "Shopping" },
+            { value: "Show", label: "Show" },
+            { value: "Sorveteria", label: "Sorveteria" },
+            { value: "Spotify", label: "Spotify" },
+            { value: "Supermercado", label: "Supermercado" },
+            { value: "Taxas gerais", label: "Taxas gerais" },
+            { value: "Taxas do Imovel", label: "Taxas do Imóvel" },
+            { value: "Taxas do Imovel 2", label: "Taxas do Imóvel 2" },
+            { value: "Taxas do Imovel 3", label: "Taxas do Imóvel 3" },
+            { value: "Taxas do Imovel 4", label: "Taxas do Imóvel 4" },
+            { value: "Tik Tok Ads", label: "Tik Tok Ads" },
+            { value: "Uber", label: "Uber" },
+            { value: "Vale-Alimentação", label: "Vale-Alimentação" },
+            { value: "Vale-Transporte", label: "Vale-Transporte" },
+            { value: "Vestuário", label: "Vestuário" },
+            { value: "Vestuário Conjuge", label: "Vestuário Cônjuge/Parceiro(a)" },
+            { value: "Veterinário", label: "Veterinário" }
+        ];
+
         const MICRO_PARA_MASTER = {
             "Água": "Moradia", "Air BNB": "Lazer", "Aluguel": "Moradia",
             "Aluguel Imovel 2": "Moradia", "Aluguel Imovel 3": "Moradia", "Aluguel Imovel 4": "Moradia",
@@ -104,6 +219,44 @@
             "Vale-Alimentação": "Alimentação", "Vale-Transporte": "Transporte", "Vestuário": "Pessoal",
             "Vestuário Conjuge": "Pessoal", "Veterinário": "Pets"
         };
+
+        // ---------- Busca de Micro-Categoria (substitui o select gigante) ----------
+
+        function filtrarCategorias() {
+            const termo = document.getElementById("categoriaBusca").value.trim().toLowerCase();
+            const lista = document.getElementById("listaCategoriasFiltradas");
+
+            const filtradas = MICRO_CATEGORIAS.filter(c => c.label.toLowerCase().includes(termo));
+
+            if (filtradas.length === 0) {
+                lista.innerHTML = '<div class="item-categoria item-categoria-vazio">Nenhuma categoria encontrada</div>';
+                lista.style.display = "block";
+                return;
+            }
+
+            lista.innerHTML = filtradas.map(c =>
+                `<div class="item-categoria" onclick="selecionarCategoria('${c.value.replace(/'/g, "\\'")}')">${c.label}</div>`
+            ).join("");
+            lista.style.display = "block";
+        }
+
+        function selecionarCategoria(valor) {
+            const item = MICRO_CATEGORIAS.find(c => c.value === valor);
+            document.getElementById("categoriaBusca").value = item ? item.label : valor;
+            document.getElementById("categoria").value = valor;
+            document.getElementById("listaCategoriasFiltradas").style.display = "none";
+
+            aplicarMasterAutomatico();
+            verificarDicaFinanciamento();
+            verificarCartaAnterior();
+        }
+
+        document.addEventListener("click", function (e) {
+            if (!e.target.closest(".campo-busca-categoria")) {
+                const lista = document.getElementById("listaCategoriasFiltradas");
+                if (lista) lista.style.display = "none";
+            }
+        });
 
         function aplicarMasterAutomatico() {
             const categoria = document.getElementById("categoria").value;
@@ -356,6 +509,12 @@
             const descricao = document.getElementById("descricao").value;
             const tipo = document.getElementById("tipo").value;
 
+            if (!categoria) {
+                alert("Escolha uma categoria na lista de busca antes de salvar.");
+                document.getElementById("categoriaBusca").focus();
+                return;
+            }
+
             const rsg = document.getElementById("rsg").value;
             const tipoGasto = document.getElementById("tipoGasto").value;
 
@@ -455,6 +614,8 @@
             document.getElementById("horario").value = despesa.horario || "";
             document.getElementById("categoriaMaster").value = despesa.categoriaMaster || "";
             document.getElementById("categoria").value = despesa.categoria;
+            const itemCategoria = MICRO_CATEGORIAS.find(c => c.value === despesa.categoria);
+            document.getElementById("categoriaBusca").value = itemCategoria ? itemCategoria.label : despesa.categoria;
             document.getElementById("descricao").value = despesa.descricao;
             document.getElementById("valor").value = despesa.valor;
             document.getElementById("tipo").value = despesa.tipo;
@@ -675,121 +836,14 @@
                 </select>
             </div>
 
-            <label for="categoria">Micro-Categoria</label>
-            <select id="categoria" onchange="aplicarMasterAutomatico(); verificarDicaFinanciamento(); verificarCartaAnterior();" required>
-                <option value="Água">Água</option>
-                <option value="Air BNB">Air BNB</option>
-                <option value="Aluguel">Aluguel</option>
-                <option value="Aluguel Imovel 2">Aluguel (Imóvel 2)</option>
-                <option value="Aluguel Imovel 3">Aluguel (Imóvel 3)</option>
-                <option value="Aluguel Imovel 4">Aluguel (Imóvel 4)</option>
-                <option value="Alvará">Alvará</option>
-                <option value="Amazon">Amazon</option>
-                <option value="Assinaturas de aplicativos">Assinaturas de aplicativos</option>
-                <option value="Cartão de Crédito">Cartão de Crédito</option>
-                <option value="Bitcoin">Bitcoin</option>
-                <option value="Boliche">Boliche</option>
-                <option value="Bolos">Bolos</option>
-                <option value="Caixinha Nubank">Caixinha Nubank</option>
-                <option value="Caixinha Nubank - Aluguel">Caixinha Nubank - Rendimentos Aluguel</option>
-                <option value="Caixinha Nubank - Meta 2">Caixinha Nubank - Meta 2</option>
-                <option value="Claude AI">Claude AI</option>
-                <option value="Aporte em Investimentos">Aporte em Investimentos</option>
-                <option value="Rendimentos de Investimentos">Rendimentos de Investimentos</option>
-                <option value="Consórcio">Consórcio</option>
-                <option value="Calçados">Calçados</option>
-                <option value="Contador">Contador</option>
-                <option value="Congressos">Congressos</option>
-                <option value="Cursos">Cursos</option>
-                <option value="Celular BR">Celular BR</option>
-                <option value="Celular CA">Celular CA</option>
-                <option value="Chocolateria">Chocolateria</option>
-                <option value="Cinema">Cinema</option>
-                <option value="Coffe Shop">Coffee Shop</option>
-                <option value="Cosméticos">Cosméticos</option>
-                <option value="Delivery Food">Delivery Food</option>
-                <option value="Diarista">Diarista</option>
-                <option value="Distribuidora">Distribuidora</option>
-                <option value="Dízimo">Dízimo</option>
-                <option value="Doceria">Doceria</option>
-                <option value="Drogaria">Drogaria</option>
-                <option value="Educação">Educação</option>
-                <option value="Eletrônicos">Eletrônicos</option>
-                <option value="Empréstimos">Empréstimos</option>
-                <option value="Exames e concursos">Exames e concursos</option>
-                <option value="Faculdade">Faculdade</option>
-                <option value="Férias">Férias</option>
-                <option value="Financiamento Imobiliario">Financiamento Imobiliário</option>
-                <option value="FGTS">FGTS</option>
-                <option value="FIES">FIES</option>
-                <option value="F1 game">F1 game</option>
-                <option value="F1 TV">F1 TV</option>
-                <option value="Games">Games</option>
-                <option value="Impostos">Impostos</option>
-                <option value="Impostos PJ">Impostos PJ</option>
-                <option value="Impostos PJ Simples Nacional">Impostos PJ Simples Nacional</option>
-                <option value="Insumos para Produção">Insumos para Produção</option>
-                <option value="Internet">Internet</option>
-                <option value="Investimentos">Investimentos</option>
-                <option value="IPVA">IPVA</option>
-                <option value="IPTU">IPTU</option>
-                <option value="Hospedagens AIRBNB">Hospedagens/AIRBNB</option>
-                <option value="Lavanderia">Lavanderia</option>
-                <option value="Lava-jato">Lava-jato</option>
-                <option value="Lanche e Fast-food">Lanche e Fast-food</option>
-                <option value="Livros">Livros</option>
-                <option value="Limpeza">Limpeza</option>
-                <option value="Luz">Luz</option>
-                <option value="Manutenção Casa">Manutenção Casa</option>
-                <option value="Manutenção do Carro">Manutenção do Carro</option>
-                <option value="META Ads">META Ads</option>
-                <option value="Metrô">Metrô</option>
-                <option value="Mobília e utensílios">Mobília e utensílios</option>
-                <option value="Ofertas">Ofertas</option>
-                <option value="Óticas">Óticas</option>
-                <option value="Padaria">Padaria</option>
-                <option value="Papelaria">Papelaria</option>
-                <option value="Passagem aérea">Passagem aérea</option>
-                <option value="Plano de Saúde">Plano de Saúde</option>
-                <option value="PLR">PLR</option>
-                <option value="Pensão">Pensão</option>
-                <option value="Pet Shop">Pet Shop</option>
-                <option value="PIX Conta PJ">PIX Conta PJ</option>
-                <option value="PIX Conjuge">PIX Cônjuge/Parceiro(a)</option>
-                <option value="PIX Familia">PIX Família</option>
-                <option value="Passeios e expedições">Passeios e expedições</option>
-                <option value="Poupança">Poupança</option>
-                <option value="Pós-Graduação">Pós-Graduação</option>
-                <option value="Posto de Gasolina">Posto de Gasolina</option>
-                <option value="Presentes">Presentes</option>
-                <option value="Renovar CNH">Renovar CNH</option>
-                <option value="Renovar visto">Renovar visto</option>
-                <option value="Restaurantes">Restaurantes</option>
-                <option value="Reembolso de despesas">Reembolso de despesas</option>
-                <option value="Roupas">Roupas</option>
-                <option value="Salário">Salário</option>
-                <option value="Serasa">Serasa</option>
-                <option value="Salão de beleza">Salão de beleza</option>
-                <option value="Seguro desemprego">Seguro desemprego</option>
-                <option value="Seguro do Carro">Seguro do Carro</option>
-                <option value="Shopping">Shopping</option>
-                <option value="Show">Show</option>
-                <option value="Sorveteria">Sorveteria</option>
-                <option value="Spotify">Spotify</option>
-                <option value="Supermercado">Supermercado</option>
-                <option value="Taxas gerais">Taxas gerais</option>
-                <option value="Taxas do Imovel">Taxas do Imóvel</option>
-                <option value="Taxas do Imovel 2">Taxas do Imóvel 2</option>
-                <option value="Taxas do Imovel 3">Taxas do Imóvel 3</option>
-                <option value="Taxas do Imovel 4">Taxas do Imóvel 4</option>
-                <option value="Tik Tok Ads">Tik Tok Ads</option>
-                <option value="Uber">Uber</option>
-                <option value="Vale-Alimentação">Vale-Alimentação</option>
-                <option value="Vale-Transporte">Vale-Transporte</option>
-                <option value="Vestuário">Vestuário</option>
-                <option value="Vestuário Conjuge">Vestuário Cônjuge/Parceiro(a)</option>
-                <option value="Veterinário">Veterinário</option>
-            </select>
+            <div class="campo-busca-categoria" style="position:relative;">
+                <label for="categoriaBusca">Micro-Categoria</label>
+                <input type="text" id="categoriaBusca" placeholder="Digite pra buscar (ex: supermercado, uber...)"
+                       autocomplete="off" oninput="filtrarCategorias()" onfocus="filtrarCategorias()">
+                <input type="hidden" id="categoria" required>
+                <div id="listaCategoriasFiltradas" class="lista-categorias-dropdown" style="display:none;"></div>
+            </div>
+
 
             <p id="avisoCartaAnterior" class="hint-text" style="display:none; border-left: 2px solid var(--beacon); padding-left: 10px;"></p>
 

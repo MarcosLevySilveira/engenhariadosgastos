@@ -219,6 +219,56 @@ button, input, select {
     background: var(--beacon);
 }
 
+/* ---------- Busca de Micro-Categoria ---------- */
+
+.campo-busca-categoria {
+    display: flex;
+    flex-direction: column;
+}
+
+.lista-categorias-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    background: var(--surface-raised);
+    border: 1px solid var(--line);
+    border-top: none;
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    max-height: 260px;
+    overflow-y: auto;
+    margin-top: -2px;
+}
+
+.item-categoria {
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    color: var(--mist);
+    cursor: pointer;
+    border-bottom: 1px solid var(--line);
+}
+
+.item-categoria:last-child {
+    border-bottom: none;
+}
+
+.item-categoria:hover {
+    background: var(--surface-alt);
+    color: var(--beacon);
+}
+
+.item-categoria-vazio {
+    color: var(--fog);
+    cursor: default;
+    font-style: italic;
+}
+
+.item-categoria-vazio:hover {
+    background: transparent;
+    color: var(--fog);
+}
+
 .wordmark {
     font-family: var(--font-display);
     font-size: 1.25rem;
