@@ -89,6 +89,136 @@ button, input, select {
     z-index: 20;
 }
 
+.ios-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--coral-soft);
+    border-bottom: 1px solid var(--coral);
+    padding: 12px 16px;
+    font-size: 0.82rem;
+    color: var(--mist);
+}
+
+.ios-warning p {
+    margin: 0;
+    flex: 1;
+    line-height: 1.4;
+}
+
+.ios-warning button {
+    background: transparent;
+    border: none;
+    color: var(--fog);
+    font-size: 1rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 4px;
+    flex-shrink: 0;
+}
+
+.briefing-lembrete {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--beacon-soft);
+    border-bottom: 1px solid var(--beacon);
+    padding: 12px 16px;
+    font-size: 0.82rem;
+    color: var(--mist);
+}
+
+.briefing-lembrete p {
+    margin: 0;
+    flex: 1;
+    line-height: 1.4;
+}
+
+.briefing-lembrete-link {
+    background: var(--beacon);
+    color: #21160a;
+    font-weight: 600;
+    font-size: 0.78rem;
+    padding: 7px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.briefing-lembrete button {
+    background: transparent;
+    border: none;
+    color: var(--fog);
+    font-size: 1rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 4px;
+    flex-shrink: 0;
+}
+
+/* ---------- Onboarding (boas-vindas.html) ---------- */
+
+.onboarding-app {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    padding: 60px 24px 32px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+}
+
+.onboarding-skip {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    color: var(--fog);
+    font-size: 0.82rem;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.onboarding-card {
+    text-align: center;
+    margin-bottom: 36px;
+}
+
+.onboarding-titulo {
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 6.5vw, 2rem);
+    line-height: 1.3;
+    color: var(--mist);
+    margin: 12px 0 16px;
+}
+
+.onboarding-corpo {
+    color: var(--fog);
+    font-size: 0.98rem;
+    line-height: 1.6;
+    max-width: 42ch;
+    margin: 0 auto;
+}
+
+.onboarding-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 28px;
+}
+
+.onboarding-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--line);
+}
+
+.onboarding-dot.ativo {
+    background: var(--beacon);
+}
+
 .wordmark {
     font-family: var(--font-display);
     font-size: 1.25rem;
@@ -841,6 +971,113 @@ ul.dre-itens .valor-mono {
     font-family: var(--font-mono);
     color: var(--fog);
     white-space: nowrap;
+}
+
+/* ---------- Cartões e Parcelas ---------- */
+
+.cartao-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface-alt);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-size: 0.85rem;
+}
+
+.parcela-group {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-bottom: 14px;
+}
+
+.parcela-group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.parcela-group-header h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--mist);
+}
+
+.parcela-group-meta {
+    font-size: 0.78rem;
+    color: var(--fog);
+    margin: 0 0 12px;
+}
+
+.parcela-group-total {
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    color: var(--beacon);
+}
+
+.parcela-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--surface-alt);
+    font-size: 0.84rem;
+}
+
+.parcela-item:last-child { border-bottom: none; }
+
+.parcela-item label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    color: var(--mist);
+    cursor: pointer;
+}
+
+.parcela-item .valor-mono {
+    font-family: var(--font-mono);
+    color: var(--fog);
+    margin-left: auto;
+}
+
+.parcela-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.parcela-actions button {
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.btn-quitar {
+    background: var(--tide);
+    border: none;
+    color: #0b2018;
+    font-weight: 600;
+}
+
+.btn-quitar-valor {
+    background: transparent;
+    border: 1px solid var(--beacon);
+    color: var(--beacon);
+}
+
+.btn-estornar {
+    background: transparent;
+    border: 1px solid var(--coral);
+    color: var(--coral);
 }
 
 /* ---------- Insight card (padrão em destaque) ---------- */

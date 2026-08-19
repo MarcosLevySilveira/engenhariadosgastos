@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lighthouse — Bem-vindo</title>
+<link rel="stylesheet" href="styles.css">
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B1622">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+
+<div id="app" class="onboarding-app"></div>
+
+<script>
+    const SLIDES = [
+        {
+            eyebrow: "Bem-vindo",
+            titulo: "Isso não é só mais um app de controle financeiro",
+            corpo: "Ele nasceu de uma pergunta simples: por que a gente sabe o que fazer com dinheiro, mas não faz? A resposta não estava numa planilha — estava no comportamento. É isso que esse app tenta te mostrar."
+        },
+        {
+            eyebrow: "O método",
+            titulo: "O que é RSG?",
+            corpo: "RSG é o Retorno Sobre Gasto. Depois de cada compra, você avalia de 1 a 5 o quanto aquilo valeu a pena de verdade — não em dinheiro, em satisfação. Não é sobre quanto custou. É sobre o que te devolveu."
+        },
+        {
+            eyebrow: "Como usar",
+            titulo: "Comece simples, aprofunde com o tempo",
+            corpo: "Você não precisa preencher tudo desde o primeiro dia. O app libera campos novos conforme você usa — primeiro só valor e categoria, depois data e horário, depois RSG e o resto do método, no seu ritmo."
+        },
+        {
+            eyebrow: "Pronto?",
+            titulo: "Seu primeiro lançamento leva menos de 10 segundos",
+            corpo: "O resto — os padrões, os gatilhos, o que isso revela sobre você — você descobre com o tempo, não de uma vez.",
+            final: true
+        }
+    ];
+
+    let indiceAtual = 0;
+
+    function hojeISO() {
+        const d = new Date();
+        return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    }
+
+    function concluirOnboarding() {
+        localStorage.setItem("onboardingVisto_demo", hojeISO());
+        window.location.href = "cadastro4.html";
+    }
+
+    function proximoSlide() {
+        if (indiceAtual < SLIDES.length - 1) {
+            indiceAtual++;
+            render();
+        } else {
+            concluirOnboarding();
+        }
+    }
+
+    function render() {
+        const app = document.getElementById("app");
+        const slide = SLIDES[indiceAtual];
+
+        const dots = SLIDES.map((_, i) =>
+            `<span class="onboarding-dot ${i === indiceAtual ? 'ativo' : ''}"></span>`
+        ).join("");
+
+        app.innerHTML = `
+            <span class="onboarding-skip" onclick="concluirOnboarding()">Pular</span>
+
+            <div class="onboarding-card">
+                <span class="tag">${slide.eyebrow}</span>
+                <h1 class="onboarding-titulo">${slide.titulo}</h1>
+                <p class="onboarding-corpo">${slide.corpo}</p>
+            </div>
+
+            <div class="onboarding-dots">${dots}</div>
+
+            <button class="btn-primario" onclick="proximoSlide()">
+                ${slide.final ? "Começar a usar" : "Próximo"}
+            </button>
+        `;
+    }
+
+    render();
+</script>
+
+</body>
+</html>
