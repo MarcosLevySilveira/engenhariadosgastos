@@ -13,8 +13,6 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<!-- Base de dados inicial (gerada a partir do CSV importado) -->
-<script src="dados_iniciais.js"></script>
 </head>
 
 <body>
@@ -26,36 +24,32 @@
     <nav id="site-nav" class="site-nav">
         <div class="nav-group">
             <p class="nav-group-title">Painéis</p>
-            <a href="index.html">Tabela de Gastos</a>
-            <a href="rsgDash.html" class="active">Dashboard RSG</a>
-            <a href="gatilhos.html">Dashboard Inteligente</a>
-            <a href="dre.html">Despesas e Receitas</a>
+        <a href="index.html">Tabela de Gastos</a>
+        <a href="rsgDash.html" class="active">Dashboard RSG</a>
+        <a href="gatilhos.html">Dashboard Inteligente</a>
+        <a href="dre.html">Despesas e Receitas</a>
+<a href="briefing-semanal.html">Briefing Semanal</a>
+<a href="relatorio-mensal.html">Relatório Mensal</a>
         </div>
         <div class="nav-group">
             <p class="nav-group-title">Lançar</p>
-            <a href="cadastro4.html">Cadastrar Despesa/Entrada</a>
+        <a href="cadastro4.html">Cadastrar Despesa/Entrada</a>
+<a href="parcelas.html">Parcelas em Aberto</a>
         </div>
         <div class="nav-group">
             <p class="nav-group-title">Relatórios</p>
-            <a href="monthlyExpenses.html">Gastos Mensais</a>
-            <a href="mastermonthly.html">Gastos Macro</a>
-            <a href="monthlyexpensestransfer.html">Transferências Mensais</a>
-            <a href="mastermonthlytransfer.html">Transferências Macro</a>
-            <a href="burnporsemana.html">Burn por Semana</a>
-            <a href="exportpdf.html">Exportar PDF</a>
+        <a href="monthlyExpenses.html">Gastos Mensais</a>
+        <a href="mastermonthly.html">Gastos Macro</a>
         </div>
-        <div class="nav-group">
-            <p class="nav-group-title">Outros</p>
-            <a href="debts.html">Dívidas</a>
-            <a href="game.html">InvestGame</a>
-            <a href="portfolio.html">Portfolio</a>
-        </div>
+<div class="nav-group">
+<p class="nav-group-title">Configurações</p>
+<a href="backup.html">Backup e Restauração</a>
+</div>
     </nav>
 
     <main>
         <div class="form-header">
             <h1>Dashboard RSG × Tipo de Gasto</h1>
-            <button type="button" class="btn-ghost" onclick="carregarBaseCsvManual()">Carregar base do CSV</button>
         </div>
 
         <section class="hero-beacon" id="insightCard">
@@ -105,7 +99,7 @@
         };
 
         function carregarDados() {
-            return JSON.parse(localStorage.getItem("despesas")) || [];
+            return JSON.parse(localStorage.getItem("despesas_demo")) || [];
         }
 
         function gerarMatriz() {
@@ -273,7 +267,6 @@
         }
 
         function init() {
-            inicializarDadosLighthouse();
             const matriz = gerarMatriz();
             renderizarInsight(matriz);
             renderizarHeatmap(matriz);
@@ -290,5 +283,7 @@
             });
         }
     </script>
+<script src="ios-warning.js"></script>
+<script src="briefing-lembrete.js"></script>
 </body>
 </html>

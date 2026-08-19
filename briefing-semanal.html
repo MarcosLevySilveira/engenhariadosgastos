@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lighthouse — Briefing Semanal</title>
+<link rel="stylesheet" href="styles.css">
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B1622">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+</head>
+
+<body onload="init()">
+
+  <header class="topbar">
+    <a href="index.html" class="wordmark">Lighthouse</a>
+    <button class="nav-toggle" id="navToggle" aria-controls="site-nav" aria-expanded="false">Menu</button>
+  </header>
+
+  <nav id="site-nav" class="site-nav">
+    <div class="nav-group">
+        <p class="nav-group-title">Painéis</p>
+        <a href="index.html">Tabela de Gastos</a>
+        <a href="rsgDash.html">Dashboard RSG</a>
+        <a href="gatilhos.html">Dashboard Inteligente</a>
+        <a href="dre.html">Despesas e Receitas</a>
+        <a href="briefing-semanal.html" class="active">Briefing Semanal</a>
+        <a href="relatorio-mensal.html">Relatório Mensal</a>
+    </div>
+    <div class="nav-group">
+        <p class="nav-group-title">Lançar</p>
+        <a href="cadastro4.html">Cadastrar Despesa/Entrada</a>
+        <a href="parcelas.html">Parcelas em Aberto</a>
+    </div>
+    <div class="nav-group">
+        <p class="nav-group-title">Relatórios</p>
+        <a href="monthlyExpenses.html">Gastos Mensais</a>
+        <a href="mastermonthly.html">Gastos Macro</a>
+    </div>
+<div class="nav-group">
+<p class="nav-group-title">Configurações</p>
+<a href="backup.html">Backup e Restauração</a>
+</div>
+  </nav>
+
+  <main>
+    <div class="form-header">
+      <h1>Briefing Semanal</h1>
+    </div>
+    <p class="hint-text" id="periodoTexto"></p>
+
+    <div id="conteudo"></div>
+  </main>
+
+<script>
+    document.getElementById("navToggle").addEventListener("click", function () {
+        const nav = document.getElementById("site-nav");
+        const aberto = nav.classList.toggle("open");
+        this.setAttribute("aria-expanded", aberto);
+    });
+
+    function formatarMoeda(valor) {
+        return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function hojeISO() {
+        const d = new Date();
+        return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    }
+
+    function somarDias(dataISO, dias) {
+        const [ano, mes, dia] = dataISO.split("-").map(Number);
+        const d = new Date(ano, mes - 1, dia + dias);
+        return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    }
+
+    function formatarDataBR(dataISO) {
+        const [ano, mes, dia] = dataISO.split("-");
+        return `${dia}/${mes}/${ano}`;
+    }
+
+    const TIPOS_IMPULSO = ["Pequeno impulso", "Grande impulso", "Arrependimento", "Setback não-evitável"];
+
+    function getDespesas() {
+        return JSON.parse(localStorage.getItem("despesas_demo")) || [];
+    }
+
+    function getCartas() {
+        return JSON.parse(localStorage.getItem("cartasEuFuturo_demo")) || [];
+    }
+
+    function calcularKPIs(despesas, inicio, fim) {
+        const noPeriodo = despesas.filter(d => d.tipo === "Saída" && d.data >= inicio && d.data <= fim);
+        const total = noPeriodo.reduce((s, d) => s + d.valor, 0);
+        const impulso = noPeriodo.filter(d => TIPOS_IMPULSO.includes(d.tipoGasto));
+        const totalImpulso = impulso.reduce((s, d) => s + d.valor, 0);
+
+        const planejados = noPeriodo.filter(d => d.tipoGasto === "Planejado").length;
+        const scoreControle = noPeriodo.length > 0
+            ? Math.max(0, Math.min(100, (planejados / noPeriodo.length) * 50 + (1 - (total > 0 ? totalImpulso / total : 0)) * 50))
+            : 0;
+
+        const rsgsImpulso = impulso.filter(d => d.rsg).map(d => Number(d.rsg));
+        const avgRsgImpulso = rsgsImpulso.length > 0 ? rsgsImpulso.reduce((a, b) => a + b, 0) / rsgsImpulso.length : 5;
+        const pesoVolume = total > 0 ? (totalImpulso / total) * 60 : 0;
+        const pesoRsg = ((5 - avgRsgImpulso) / 5) * 40;
+        const scoreDescontrole = Math.max(0, Math.min(100, pesoVolume + pesoRsg));
+
+        // top sabotador
+        const gatilhoMap = {};
+        impulso.forEach(d => {
+            if (!d.gatilho) return;
+            if (!gatilhoMap[d.gatilho]) gatilhoMap[d.gatilho] = { valor: 0, freq: 0 };
+            gatilhoMap[d.gatilho].valor += d.valor;
+            gatilhoMap[d.gatilho].freq += 1;
+        });
+        const sabotadores = Object.entries(gatilhoMap)
+            .map(([g, v]) => ({ gatilho: g, valor: v.valor, freq: v.freq, score: v.valor * v.freq }))
+            .sort((a, b) => b.score - a.score);
+
+        return { total, totalImpulso, pctImpulso: total > 0 ? (totalImpulso / total) * 100 : 0, scoreControle, scoreDescontrole, topSabotador: sabotadores[0] || null, qtdLancamentos: noPeriodo.length };
+    }
+
+    function variacaoTexto(atual, anterior) {
+        if (anterior === 0) return atual > 0 ? "↑ novo" : "—";
+        const variacao = ((atual - anterior) / anterior) * 100;
+        const seta = variacao > 0 ? "↑" : variacao < 0 ? "↓" : "—";
+        const classe = variacao > 0 ? "positivo" : variacao < 0 ? "negativo" : "";
+        return `<span class="${classe}">${seta} ${Math.abs(variacao).toFixed(0)}%</span>`;
+    }
+
+    function init() {
+        const hoje = hojeISO();
+        const inicioSemana = somarDias(hoje, -6);
+        const inicioSemanaAnterior = somarDias(hoje, -13);
+        const fimSemanaAnterior = somarDias(hoje, -7);
+
+        document.getElementById("periodoTexto").textContent = `Período: ${formatarDataBR(inicioSemana)} a ${formatarDataBR(hoje)}`;
+
+        const despesas = getDespesas();
+        const atual = calcularKPIs(despesas, inicioSemana, hoje);
+        const anterior = calcularKPIs(despesas, inicioSemanaAnterior, fimSemanaAnterior);
+
+        const cartas = getCartas().filter(c => c.data >= inicioSemana && c.data <= hoje);
+
+        const conteudo = document.getElementById("conteudo");
+
+        if (atual.qtdLancamentos === 0) {
+            conteudo.innerHTML = `<div class="insight-card-box"><p class="insight-empty" style="text-align:center;">Nenhum gasto registrado nos últimos 7 dias.</p></div>`;
+        } else {
+            conteudo.innerHTML = `
+                <div class="insight-grid">
+                    <div class="insight-card-box">
+                        <h3>💰 Total gasto na semana</h3>
+                        <p class="insight-card-value">R$ ${formatarMoeda(atual.total)} ${variacaoTexto(atual.total, anterior.total)}</p>
+                        <span class="insight-card-caption">Semana anterior: R$ ${formatarMoeda(anterior.total)}</span>
+                    </div>
+
+                    <div class="insight-card-box">
+                        <h3>🧩 Gasto em impulso/arrependimento</h3>
+                        <p class="insight-card-value">R$ ${formatarMoeda(atual.totalImpulso)} (${atual.pctImpulso.toFixed(0)}%) ${variacaoTexto(atual.totalImpulso, anterior.totalImpulso)}</p>
+                        <span class="insight-card-caption">Semana anterior: R$ ${formatarMoeda(anterior.totalImpulso)}</span>
+                    </div>
+
+                    <div class="insight-card-box">
+                        <h3>🎯 Score de Controle</h3>
+                        <p class="insight-card-value">${atual.scoreControle.toFixed(0)}/100 ${variacaoTexto(atual.scoreControle, anterior.scoreControle)}</p>
+                    </div>
+
+                    <div class="insight-card-box">
+                        <h3>🌀 Score de Descontrole</h3>
+                        <p class="insight-card-value">${atual.scoreDescontrole.toFixed(0)}/100 ${variacaoTexto(atual.scoreDescontrole, anterior.scoreDescontrole)}</p>
+                    </div>
+
+                    <div class="insight-card-box">
+                        <h3>💣 Top Sabotador da semana</h3>
+                        <p class="insight-card-value">${atual.topSabotador ? `${atual.topSabotador.gatilho} — R$ ${formatarMoeda(atual.topSabotador.valor)} (${atual.topSabotador.freq}x)` : "Nenhum destaque essa semana"}</p>
+                    </div>
+                </div>
+
+                <h2 class="resultado-secao-titulo" style="margin-top:28px;">Cartas ao Eu Futuro desta semana</h2>
+                ${cartas.length === 0
+                    ? `<div class="insight-card-box"><p class="insight-empty" style="text-align:center;">Nenhuma nota escrita essa semana.</p></div>`
+                    : `<div class="insight-card-box"><ul class="insight-card-list">
+                        ${cartas.map(c => `<li><span>${c.categoria} — ${c.texto}</span><span class="valor-mono">${formatarDataBR(c.data)}</span></li>`).join("")}
+                       </ul></div>`
+                }
+            `;
+        }
+
+        localStorage.setItem("ultimoBriefingVisto_demo", hoje);
+    }
+
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+            navigator.serviceWorker.register("sw.js")
+                .then((reg) => console.log("Service worker registrado:", reg.scope))
+                .catch((err) => console.warn("Falha ao registrar service worker:", err));
+        });
+    }
+</script>
+
+<script src="ios-warning.js"></script>
+</body>
+</html>

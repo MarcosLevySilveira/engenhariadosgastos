@@ -13,9 +13,6 @@
     <link rel="icon" href="icon-192.png">
     <link rel="apple-touch-icon" href="icon-192.png">
 
-    <!-- Base de dados inicial (gerada a partir do CSV importado) -->
-    <script src="dados_iniciais.js"></script>
-
     <script>
         function getPeriodoDoDia(horario) {
             if (!horario) return "-";
@@ -29,6 +26,314 @@
 
         function formatarMoeda(valor) {
             return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function hojeISO() {
+            const d = new Date();
+            return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+        }
+
+        // ---------- Carta ao Eu Futuro ----------
+        // Disponível a partir do Nível 3 (depende do campo Tipo de Gasto).
+        // Ao registrar um gasto de impulso/arrependimento, oferece deixar uma nota
+        // curta pra si mesmo. Da próxima vez que a mesma categoria for usada, a
+        // nota reaparece antes de confirmar o novo lançamento.
+
+        const TIPOS_QUALIFICAM_CARTA = ["Arrependimento", "Pequeno impulso", "Grande impulso", "Setback evitável"];
+
+        function getCartas() {
+            return JSON.parse(localStorage.getItem("cartasEuFuturo_demo")) || [];
+        }
+
+        function saveCartas(cartas) {
+            localStorage.setItem("cartasEuFuturo_demo", JSON.stringify(cartas));
+        }
+
+        function verificarCartaAnterior() {
+            const categoria = document.getElementById("categoria").value;
+            const aviso = document.getElementById("avisoCartaAnterior");
+            if (!aviso) return;
+
+            const cartas = getCartas().filter(c => c.categoria === categoria);
+            if (cartas.length === 0) {
+                aviso.style.display = "none";
+                return;
+            }
+            const maisRecente = cartas[cartas.length - 1];
+            aviso.innerHTML = `⚠️ Da última vez em <strong>${categoria}</strong>, você escreveu pra si mesmo: <em>\u201c${maisRecente.texto}\u201d</em> <span class="insight-card-caption">(${maisRecente.data})</span>`;
+            aviso.style.display = "block";
+        }
+
+        // ---------- Progressive disclosure (níveis) ----------
+
+        const NIVEL_LIMIARES = { 2: 50, 3: 150, 4: 300 };
+
+        const MICRO_PARA_MASTER = {
+            "Água": "Moradia", "Air BNB": "Lazer", "Aluguel": "Moradia",
+            "Aluguel Imovel 2": "Moradia", "Aluguel Imovel 3": "Moradia", "Aluguel Imovel 4": "Moradia",
+            "Alvará": "Dívidas e Obrigações", "Amazon": "Pessoal", "Assinaturas de aplicativos": "Conexão e prazer",
+            "Cartão de Crédito": "Cartão de Crédito", "Bitcoin": "Investimentos", "Boliche": "Lazer", "Bolos": "Alimentação",
+            "Caixinha Nubank": "Investimentos", "Caixinha Nubank - Aluguel": "Investimentos", "Caixinha Nubank - Meta 2": "Investimentos",
+            "Claude AI": "Conexão e prazer", "Aporte em Investimentos": "Investimentos", "Rendimentos de Investimentos": "Investimentos",
+            "Consórcio": "Dívidas e Obrigações", "Calçados": "Pessoal", "Contador": "Pessoal", "Congressos": "Educação",
+            "Cursos": "Educação", "Celular BR": "Conexão e prazer", "Celular CA": "Conexão e prazer", "Chocolateria": "Alimentação",
+            "Cinema": "Lazer", "Coffe Shop": "Alimentação", "Cosméticos": "Pessoal", "Delivery Food": "Alimentação",
+            "Diarista": "Moradia", "Distribuidora": "Alimentação", "Dízimo": "Pessoal", "Doceria": "Alimentação",
+            "Drogaria": "Saúde", "Educação": "Educação", "Eletrônicos": "Pessoal", "Empréstimos": "Dívidas e Obrigações",
+            "Exames e concursos": "Educação", "Faculdade": "Educação", "Férias": "Lazer",
+            "Financiamento Imobiliario": "Dívidas e Obrigações", "FGTS": "Pessoal", "FIES": "Dívidas e Obrigações",
+            "F1 game": "Lazer", "F1 TV": "Lazer", "Games": "Lazer", "Impostos": "Dívidas e Obrigações",
+            "Impostos PJ": "Dívidas e Obrigações", "Impostos PJ Simples Nacional": "Dívidas e Obrigações",
+            "Insumos para Produção": "Pessoal", "Internet": "Moradia", "Investimentos": "Investimentos",
+            "IPVA": "Transporte", "IPTU": "Moradia", "Hospedagens AIRBNB": "Lazer", "Lavanderia": "Moradia",
+            "Lava-jato": "Transporte", "Lanche e Fast-food": "Alimentação", "Livros": "Educação", "Limpeza": "Moradia",
+            "Luz": "Moradia", "Manutenção Casa": "Moradia", "Manutenção do Carro": "Transporte", "META Ads": "Tráfego Pago",
+            "Metrô": "Transporte", "Mobília e utensílios": "Moradia", "Ofertas": "Pessoal", "Óticas": "Saúde",
+            "Padaria": "Alimentação", "Papelaria": "Educação", "Passagem aérea": "Lazer", "Plano de Saúde": "Saúde",
+            "PLR": "Salário", "Pensão": "Pessoal", "Pet Shop": "Pets", "PIX Conta PJ": "Pessoal", "PIX Conjuge": "Pessoal",
+            "PIX Familia": "Pessoal", "Passeios e expedições": "Lazer", "Poupança": "Investimentos",
+            "Pós-Graduação": "Educação", "Posto de Gasolina": "Transporte", "Presentes": "Pessoal",
+            "Renovar CNH": "Transporte", "Renovar visto": "Despesas de Viagem a Trabalho", "Restaurantes": "Alimentação",
+            "Reembolso de despesas": "Despesas de Viagem a Trabalho", "Roupas": "Pessoal", "Salário": "Salário",
+            "Serasa": "Dívidas e Obrigações", "Salão de beleza": "Pessoal", "Seguro desemprego": "Salário",
+            "Seguro do Carro": "Transporte", "Shopping": "Pessoal", "Show": "Lazer", "Sorveteria": "Alimentação",
+            "Spotify": "Conexão e prazer", "Supermercado": "Alimentação", "Taxas gerais": "Dívidas e Obrigações",
+            "Taxas do Imovel": "Moradia", "Taxas do Imovel 2": "Moradia", "Taxas do Imovel 3": "Moradia",
+            "Taxas do Imovel 4": "Moradia", "Tik Tok Ads": "Tráfego Pago", "Uber": "Transporte",
+            "Vale-Alimentação": "Alimentação", "Vale-Transporte": "Transporte", "Vestuário": "Pessoal",
+            "Vestuário Conjuge": "Pessoal", "Veterinário": "Pets"
+        };
+
+        function aplicarMasterAutomatico() {
+            const categoria = document.getElementById("categoria").value;
+            const master = MICRO_PARA_MASTER[categoria];
+            if (master) document.getElementById("categoriaMaster").value = master;
+        }
+
+        function getNivelMaximo() {
+            return parseInt(localStorage.getItem("nivelMaximo_demo")) || 1;
+        }
+
+        function setNivelMaximo(n) {
+            localStorage.setItem("nivelMaximo_demo", String(n));
+        }
+
+        function calcularNivelPelaContagem(total) {
+            if (total >= NIVEL_LIMIARES[4]) return 4;
+            if (total >= NIVEL_LIMIARES[3]) return 3;
+            if (total >= NIVEL_LIMIARES[2]) return 2;
+            return 1;
+        }
+
+        function descricaoDesbloqueio(nivel) {
+            const descricoes = {
+                2: "agora você pode registrar a data e o horário exatos de cada gasto.",
+                3: "agora você pode registrar forma de pagamento (e parcelas), tipo de gasto, RSG — e ajustar a categoria master manualmente.",
+                4: "agora você pode registrar o gatilho emocional e o sentimento pós-pagamento — o nível mais completo do método RSG."
+            };
+            return descricoes[nivel] || "";
+        }
+
+        function verificarEvolucaoDeNivel(totalAtual) {
+            const nivelAtual = getNivelMaximo();
+            const nivelPelaContagem = calcularNivelPelaContagem(totalAtual);
+            if (nivelPelaContagem > nivelAtual) {
+                setNivelMaximo(nivelPelaContagem);
+                let mensagem = "";
+                for (let n = nivelAtual + 1; n <= nivelPelaContagem; n++) {
+                    mensagem += `🎉 Nível ${n} desbloqueado!\n${descricaoDesbloqueio(n)}\n\n`;
+                }
+                alert(mensagem.trim());
+            }
+        }
+
+        function toggleCampo(id, mostrar) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.style.display = mostrar ? "flex" : "none";
+            el.querySelectorAll("select, input").forEach(campo => {
+                if (mostrar) {
+                    if (campo.dataset.eraRequired === "true") campo.required = true;
+                } else {
+                    campo.dataset.eraRequired = campo.required ? "true" : "false";
+                    campo.required = false;
+                }
+            });
+        }
+
+        function aplicarVisibilidadeNivel() {
+            const nivel = getNivelMaximo();
+            const nivel2Mais = nivel >= 2;
+            const nivel3Mais = nivel >= 3;
+            const nivel4Mais = nivel >= 4;
+
+            document.getElementById("campoDataInput").style.display = nivel2Mais ? "flex" : "none";
+            document.getElementById("dataFixaTexto").style.display = nivel2Mais ? "none" : "flex";
+            document.getElementById("data").required = nivel2Mais;
+            if (!document.getElementById("data").value) {
+                document.getElementById("data").value = hojeISO();
+            }
+
+            toggleCampo("campoHorario", nivel2Mais);
+            toggleCampo("campoCategoriaMaster", nivel3Mais);
+            toggleCampo("campoFormaPagamentoGroup", nivel3Mais);
+            toggleCampo("campoTipoGasto", nivel3Mais);
+            toggleCampo("campoRSG", nivel3Mais);
+            toggleCampo("campoGatilhoSentimento", nivel4Mais);
+
+            if (!nivel3Mais) {
+                document.getElementById("formaPagamento").value = "Dinheiro";
+                document.getElementById("parcelas").value = 1;
+            }
+        }
+        // ---------- Meios de pagamento parcelados (cartão, consórcio, carnê) ----------
+
+        const TIPO_LABEL = {
+            cartao: "cartão",
+            consorcio: "consórcio",
+            carne: "carnê/crediário",
+            financiamento: "financiamento"
+        };
+
+        function getMeiosParcelados() {
+            return JSON.parse(localStorage.getItem("meiosParcelados_demo")) || [];
+        }
+
+        function saveMeiosParcelados(meios) {
+            localStorage.setItem("meiosParcelados_demo", JSON.stringify(meios));
+        }
+
+        function addMeioParcelado(event) {
+            event.preventDefault();
+            const nome = document.getElementById("meioNome").value.trim();
+            const tipo = document.getElementById("meioTipo").value;
+            const vencimento = parseInt(document.getElementById("meioVencimento").value);
+            const fechamentoInput = document.getElementById("meioFechamento").value;
+            const fechamento = tipo === "cartao" && fechamentoInput ? parseInt(fechamentoInput) : null;
+
+            if (!nome || isNaN(vencimento)) {
+                alert("Preencha nome e dia de vencimento.");
+                return;
+            }
+            if (tipo === "cartao" && fechamentoInput === "") {
+                alert("Preencha o dia de fechamento do cartão.");
+                return;
+            }
+
+            const meios = getMeiosParcelados();
+            meios.push({
+                id: "meio_" + Date.now(),
+                nome, tipo, vencimento, fechamento
+            });
+            saveMeiosParcelados(meios);
+
+            document.getElementById("formCartao").reset();
+            toggleFechamentoVisibility();
+            renderCartoesList();
+            popularFormaPagamento();
+        }
+
+        function deleteMeioParcelado(id) {
+            if (!confirm("Remover este meio de pagamento? Lançamentos já cadastrados com ele não são apagados, só deixam de mostrar o nome.")) return;
+            const meios = getMeiosParcelados().filter(m => m.id !== id);
+            saveMeiosParcelados(meios);
+            renderCartoesList();
+            popularFormaPagamento();
+        }
+
+        function renderCartoesList() {
+            const meios = getMeiosParcelados();
+            const lista = document.getElementById("listaCartoes");
+            if (meios.length === 0) {
+                lista.innerHTML = '<p class="hint-text">Nenhum meio de pagamento parcelado cadastrado ainda.</p>';
+                return;
+            }
+            lista.innerHTML = meios.map(m => {
+                const detalhe = m.tipo === "cartao"
+                    ? `fecha dia ${m.fechamento}, vence dia ${m.vencimento}`
+                    : `vence dia ${m.vencimento}`;
+                return `
+                <div class="cartao-row">
+                    <span>${m.nome} <span class="insight-card-caption">${TIPO_LABEL[m.tipo]} · ${detalhe}</span></span>
+                    <button type="button" class="btn-small btn-delete" onclick="deleteMeioParcelado('${m.id}')">Remover</button>
+                </div>
+            `;
+            }).join("");
+        }
+
+        function toggleFechamentoVisibility() {
+            const tipo = document.getElementById("meioTipo").value;
+            document.getElementById("campoFechamento").style.display = tipo === "cartao" ? "flex" : "none";
+        }
+
+        function popularFormaPagamento() {
+            const select = document.getElementById("formaPagamento");
+            const valorAtual = select.value;
+            const meios = getMeiosParcelados();
+
+            select.innerHTML = `
+                <option value="Dinheiro">Dinheiro</option>
+                <option value="Débito">Débito</option>
+                <option value="PIX">PIX</option>
+                ${meios.map(m => `<option value="meio:${m.id}">${m.nome} (${TIPO_LABEL[m.tipo]})</option>`).join("")}
+            `;
+
+            if ([...select.options].some(o => o.value === valorAtual)) {
+                select.value = valorAtual;
+            }
+            toggleParcelasVisibility();
+        }
+
+        function toggleParcelasVisibility() {
+            const select = document.getElementById("formaPagamento");
+            const campo = document.getElementById("campoParcelas");
+            const ehParcelavel = select.value.startsWith("meio:");
+            campo.style.display = ehParcelavel ? "flex" : "none";
+            if (!ehParcelavel) document.getElementById("parcelas").value = 1;
+        }
+
+        function verificarDicaFinanciamento() {
+            const categoria = document.getElementById("categoria").value.toLowerCase();
+            const formaPagamento = document.getElementById("formaPagamento").value;
+            const dica = document.getElementById("dicaFinanciamento");
+
+            const categoriaSugereParcelamento = categoria.includes("financiamento") || categoria.includes("consórcio") || categoria.includes("consorcio");
+            const jaEhParcelado = formaPagamento.startsWith("meio:");
+
+            dica.style.display = (categoriaSugereParcelamento && !jaEhParcelado) ? "block" : "none";
+        }
+
+        function nomeCartaoPorFormaPagamento(formaPagamento) {
+            if (!formaPagamento || !formaPagamento.startsWith("meio:")) return null;
+            const id = formaPagamento.replace("meio:", "");
+            const meio = getMeiosParcelados().find(m => m.id === id);
+            return meio ? `${meio.nome} (${TIPO_LABEL[meio.tipo]})` : "Meio de pagamento removido";
+        }
+
+        // ---------- Parcelas ----------
+
+        function gerarParcelas(despesaBase, totalParcelas) {
+            const grupoId = "grp_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+            const valorParcela = despesaBase.valor / totalParcelas;
+            const [ano, mes, dia] = despesaBase.data.split("-").map(Number);
+
+            const registros = [];
+            for (let i = 0; i < totalParcelas; i++) {
+                const dataParcela = new Date(ano, (mes - 1) + i, dia);
+                const dataStr = dataParcela.getFullYear() + "-" +
+                    String(dataParcela.getMonth() + 1).padStart(2, "0") + "-" +
+                    String(dataParcela.getDate()).padStart(2, "0");
+
+                registros.push({
+                    ...despesaBase,
+                    valor: valorParcela,
+                    data: dataStr,
+                    parcelaAtual: i + 1,
+                    parcelaTotal: totalParcelas,
+                    grupoParcelaId: grupoId
+                });
+            }
+            return registros;
         }
 
         function saveData(event) {
@@ -56,31 +361,65 @@
             const gatilho = document.getElementById("gatilho").value;
             const sentimentoPos = document.getElementById("sentimentoPos").value;
 
+            const formaPagamento = document.getElementById("formaPagamento").value;
+            const parcelasTotal = parseInt(document.getElementById("parcelas").value) || 1;
+
             const periodo = getPeriodoDoDia(horario);
 
-            const novaDespesa = {
+            const despesaBase = {
                 data, horario, periodo,
                 categoriaMaster, categoria, descricao,
-                valor, tipo, rsg, tipoGasto, gatilho, sentimentoPos
+                valor, tipo, rsg, tipoGasto, gatilho, sentimentoPos,
+                formaPagamento
             };
 
-            let despesas = JSON.parse(localStorage.getItem("despesas")) || [];
-            despesas.push(novaDespesa);
+            let despesas = JSON.parse(localStorage.getItem("despesas_demo")) || [];
 
-            localStorage.setItem("despesas", JSON.stringify(despesas));
+            if (formaPagamento.startsWith("meio:") && parcelasTotal > 1) {
+                const parcelas = gerarParcelas(despesaBase, parcelasTotal);
+                despesas.push(...parcelas);
+                localStorage.setItem("despesas_demo", JSON.stringify(despesas));
+                verificarEvolucaoDeNivel(despesas.length);
+                alert(`Compra parcelada em ${parcelasTotal}x cadastrada — uma parcela em cada um dos próximos meses.`);
+            } else {
+                despesas.push({ ...despesaBase, parcelaAtual: 1, parcelaTotal: 1, grupoParcelaId: null });
+                localStorage.setItem("despesas_demo", JSON.stringify(despesas));
+                verificarEvolucaoDeNivel(despesas.length);
+                alert("Cadastro realizado com sucesso!");
+            }
 
-            alert("Cadastro realizado com sucesso!");
+            if (getNivelMaximo() >= 3 && tipo === "Saída" && TIPOS_QUALIFICAM_CARTA.includes(tipoGasto)) {
+                const nota = prompt("Quer deixar uma nota pro seu eu futuro sobre esse gasto? (opcional — deixe em branco pra pular)");
+                if (nota && nota.trim()) {
+                    const cartas = getCartas();
+                    cartas.push({
+                        categoria,
+                        gatilho: getNivelMaximo() >= 4 ? gatilho : null,
+                        texto: nota.trim(),
+                        data
+                    });
+                    saveCartas(cartas);
+                }
+            }
+
             window.location.reload();
         }
 
         function loadData() {
-            const despesas = JSON.parse(localStorage.getItem("despesas")) || [];
+            const despesas = JSON.parse(localStorage.getItem("despesas_demo")) || [];
             const tableBody = document.getElementById("despesasList");
             tableBody.innerHTML = "";
 
             despesas.forEach((despesa, index) => {
                 const row = document.createElement("tr");
                 row.setAttribute("data-tipo", despesa.tipo);
+
+                const nomeCartao = nomeCartaoPorFormaPagamento(despesa.formaPagamento);
+                const formaPagamentoLabel = nomeCartao || despesa.formaPagamento || "-";
+                const parcelaLabel = (despesa.parcelaTotal && despesa.parcelaTotal > 1)
+                    ? `${despesa.parcelaAtual}/${despesa.parcelaTotal}`
+                    : "-";
+
                 row.innerHTML = `
                   <td data-label="Data">${despesa.data}</td>
                   <td data-label="Horário">${despesa.horario || "-"}</td>
@@ -90,6 +429,8 @@
                   <td data-label="Descrição">${despesa.descricao}</td>
                   <td data-label="Valor (R$)">${formatarMoeda(despesa.valor)}</td>
                   <td data-label="Tipo">${despesa.tipo}</td>
+                  <td data-label="Pagamento">${formaPagamentoLabel}</td>
+                  <td data-label="Parcela">${parcelaLabel}</td>
                   <td data-label="RSG">${despesa.rsg || "-"}</td>
                   <td data-label="Tipo de Gasto">${despesa.tipoGasto || "-"}</td>
                   <td data-label="Gatilho Emocional">${despesa.gatilho || "-"}</td>
@@ -106,7 +447,7 @@
         }
 
         function editData(index) {
-            const despesas = JSON.parse(localStorage.getItem("despesas"));
+            const despesas = JSON.parse(localStorage.getItem("despesas_demo"));
             const despesa = despesas[index];
 
             document.getElementById("data").value = despesa.data;
@@ -122,6 +463,13 @@
 
             document.getElementById("gatilho").value = despesa.gatilho || "";
             document.getElementById("sentimentoPos").value = despesa.sentimentoPos || "";
+
+            document.getElementById("formaPagamento").value = despesa.formaPagamento || "Dinheiro";
+            toggleParcelasVisibility();
+
+            if (despesa.parcelaTotal && despesa.parcelaTotal > 1) {
+                alert("Essa é uma parcela de uma compra dividida em " + despesa.parcelaTotal + "x. Editar aqui muda só ESSA parcela — pra mexer no grupo inteiro (quitar, cancelar), use a tela \"Parcelas em Aberto\".");
+            }
 
             document.getElementById("saveBtn").onclick = function () {
                 updateData(index);
@@ -153,35 +501,61 @@
             const gatilho = document.getElementById("gatilho").value;
             const sentimentoPos = document.getElementById("sentimentoPos").value;
 
+            const formaPagamento = document.getElementById("formaPagamento").value;
+
             const periodo = getPeriodoDoDia(horario);
 
+            let despesas = JSON.parse(localStorage.getItem("despesas_demo"));
+            const anterior = despesas[index];
+
             const updatedDespesa = {
+                ...anterior,
                 data, horario, periodo,
                 categoriaMaster, categoria, descricao,
-                valor, tipo, rsg, tipoGasto, gatilho, sentimentoPos
+                valor, tipo, rsg, tipoGasto, gatilho, sentimentoPos,
+                formaPagamento
             };
 
-            let despesas = JSON.parse(localStorage.getItem("despesas"));
             despesas[index] = updatedDespesa;
 
-            localStorage.setItem("despesas", JSON.stringify(despesas));
+            localStorage.setItem("despesas_demo", JSON.stringify(despesas));
 
             alert("Cadastro atualizado com sucesso!");
             window.location.reload();
         }
 
         function deleteData(index) {
-            let despesas = JSON.parse(localStorage.getItem("despesas"));
+            let despesas = JSON.parse(localStorage.getItem("despesas_demo"));
+            const despesa = despesas[index];
+
+            if (despesa.parcelaTotal && despesa.parcelaTotal > 1) {
+                const seguir = confirm(
+                    "Essa é uma parcela (" + despesa.parcelaAtual + "/" + despesa.parcelaTotal + ") de uma compra dividida. " +
+                    "Apagar aqui remove só ESSA parcela, sem mexer nas outras. " +
+                    "Pra quitar ou cancelar o grupo inteiro, use a tela \"Parcelas em Aberto\" em vez disso.\n\n" +
+                    "Quer apagar só essa parcela mesmo assim?"
+                );
+                if (!seguir) return;
+            }
+
             despesas.splice(index, 1);
-            localStorage.setItem("despesas", JSON.stringify(despesas));
+            localStorage.setItem("despesas_demo", JSON.stringify(despesas));
 
             alert("Cadastro deletado com sucesso!");
             window.location.reload();
         }
 
         function initPage() {
-            inicializarDadosLighthouse(); // carrega o CSV base no localStorage, se ainda não houver dados
+            toggleFechamentoVisibility();
+            renderCartoesList();
+            popularFormaPagamento();
             loadData();
+            verificarDicaFinanciamento();
+
+            document.getElementById("tipo").value = "Saída";
+            aplicarMasterAutomatico();
+            aplicarVisibilidadeNivel();
+            verificarCartaAnterior();
         }
 
         if ("serviceWorker" in navigator) {
@@ -204,48 +578,82 @@
     <nav id="site-nav" class="site-nav">
         <div class="nav-group">
             <p class="nav-group-title">Painéis</p>
-            <a href="index.html">Tabela de Gastos</a>
-            <a href="rsgDash.html">Dashboard RSG</a>
-            <a href="gatilhos.html">Dashboard Inteligente</a>
-            <a href="dre.html">Despesas e Receitas</a>
+        <a href="index.html">Tabela de Gastos</a>
+        <a href="rsgDash.html">Dashboard RSG</a>
+        <a href="gatilhos.html">Dashboard Inteligente</a>
+        <a href="dre.html">Despesas e Receitas</a>
+<a href="briefing-semanal.html">Briefing Semanal</a>
+<a href="relatorio-mensal.html">Relatório Mensal</a>
         </div>
         <div class="nav-group">
             <p class="nav-group-title">Lançar</p>
-            <a href="cadastro4.html" class="active">Cadastrar Despesa/Entrada</a>
+        <a href="cadastro4.html" class="active">Cadastrar Despesa/Entrada</a>
+        <a href="parcelas.html">Parcelas em Aberto</a>
         </div>
         <div class="nav-group">
             <p class="nav-group-title">Relatórios</p>
-            <a href="monthlyExpenses.html">Gastos Mensais</a>
-            <a href="mastermonthly.html">Gastos Macro</a>
-            <a href="monthlyexpensestransfer.html">Transferências Mensais</a>
-            <a href="mastermonthlytransfer.html">Transferências Macro</a>
-            <a href="burnporsemana.html">Burn por Semana</a>
-            <a href="exportpdf.html">Exportar PDF</a>
+        <a href="monthlyExpenses.html">Gastos Mensais</a>
+        <a href="mastermonthly.html">Gastos Macro</a>
         </div>
-        <div class="nav-group">
-            <p class="nav-group-title">Outros</p>
-            <a href="debts.html">Dívidas</a>
-            <a href="game.html">InvestGame</a>
-            <a href="portfolio.html">Portfolio</a>
-        </div>
+<div class="nav-group">
+<p class="nav-group-title">Configurações</p>
+<a href="backup.html">Backup e Restauração</a>
+</div>
     </nav>
 
     <main>
         <div class="form-header">
             <h1>Cadastrar Nova Despesa/Entrada</h1>
-            <button type="button" class="btn-ghost" onclick="carregarBaseCsvManual()">Carregar base do CSV</button>
         </div>
+
+        <details class="filter-panel">
+            <summary>Gerenciar meios de pagamento parcelados</summary>
+            <div class="filter-row">
+                <form id="formCartao" onsubmit="addMeioParcelado(event)" style="display:flex; flex-direction:column; gap:12px;">
+                    <label>Nome
+                        <input type="text" id="meioNome" placeholder="Ex: Nubank, Consórcio Casa, Financiamento Apê" required>
+                    </label>
+                    <label>Tipo
+                        <select id="meioTipo" onchange="toggleFechamentoVisibility()" required>
+                            <option value="cartao">Cartão de Crédito</option>
+                            <option value="consorcio">Consórcio</option>
+                            <option value="carne">Carnê / Crediário</option>
+                            <option value="financiamento">Financiamento (casa, carro, faculdade...)</option>
+                        </select>
+                    </label>
+                    <div id="campoFechamento" style="display:flex; flex-direction:column;">
+                        <label>Dia de fechamento
+                            <input type="number" id="meioFechamento" min="1" max="31" placeholder="Ex: 5">
+                        </label>
+                    </div>
+                    <label>Dia de vencimento
+                        <input type="number" id="meioVencimento" min="1" max="31" placeholder="Ex: 12" required>
+                    </label>
+                    <button type="submit" class="btn-primary">Adicionar</button>
+                </form>
+                <div id="listaCartoes" style="margin-top:14px; display:flex; flex-direction:column; gap:8px;"></div>
+            </div>
+        </details>
 
         <form id="formCadastro" onsubmit="saveData(event)">
 
-            <label for="data">Data</label>
-            <input type="date" id="data" required>
+            <div id="campoDataInput" style="display:none; flex-direction:column;">
+                <label for="data">Data</label>
+                <input type="date" id="data">
+            </div>
+            <div id="dataFixaTexto" style="display:flex; flex-direction:column;">
+                <label>Data</label>
+                <p style="margin:0; color:var(--mist);">Hoje</p>
+            </div>
 
-            <label for="horario">Horário</label>
-            <input type="time" id="horario" required>
+            <div id="campoHorario" style="display:none; flex-direction:column;">
+                <label for="horario">Horário</label>
+                <input type="time" id="horario">
+            </div>
 
-            <label for="categoriaMaster">Categoria Master</label>
-            <select id="categoriaMaster" required>
+            <div id="campoCategoriaMaster" style="display:none; flex-direction:column;">
+                <label for="categoriaMaster">Categoria Master</label>
+                <select id="categoriaMaster">
                 <option value="Moradia">Moradia</option>
                 <option value="Transporte">Transporte</option>
                 <option value="Alimentação">Alimentação</option>
@@ -263,16 +671,17 @@
                 <option value="Dívidas e Obrigações">Dívidas e Obrigações</option>
                 <option value="Pets">Pets</option>
                 <option value="Pessoal">Pessoal</option>
-            </select>
+                </select>
+            </div>
 
             <label for="categoria">Micro-Categoria</label>
-            <select id="categoria" required>
+            <select id="categoria" onchange="aplicarMasterAutomatico(); verificarDicaFinanciamento(); verificarCartaAnterior();" required>
                 <option value="Água">Água</option>
                 <option value="Air BNB">Air BNB</option>
-                <option value="Aluguel Eliza">Aluguel Eliza</option>
-                <option value="Aluguel Predilleto">Aluguel Predilleto</option>
-                <option value="Aluguel UWIN">Aluguel UWIN</option>
-                <option value="Aluguel ZIP Morumbi">Aluguel ZIP Morumbi</option>
+                <option value="Aluguel">Aluguel</option>
+                <option value="Aluguel Imovel 2">Aluguel (Imóvel 2)</option>
+                <option value="Aluguel Imovel 3">Aluguel (Imóvel 3)</option>
+                <option value="Aluguel Imovel 4">Aluguel (Imóvel 4)</option>
                 <option value="Alvará">Alvará</option>
                 <option value="Amazon">Amazon</option>
                 <option value="Assinaturas de aplicativos">Assinaturas de aplicativos</option>
@@ -282,10 +691,10 @@
                 <option value="Bolos">Bolos</option>
                 <option value="Caixinha Nubank">Caixinha Nubank</option>
                 <option value="Caixinha Nubank - Aluguel">Caixinha Nubank - Rendimentos Aluguel</option>
-                <option value="Caixinha Nubank - LEGORB20">Caixinha Nubank - LEGORB20</option>
+                <option value="Caixinha Nubank - Meta 2">Caixinha Nubank - Meta 2</option>
                 <option value="Claude AI">Claude AI</option>
-                <option value="Investimento - Lighthouse">Investimento - Lighthouse</option>
-                <option value="Rendimentos - Lighthouse">Rendimentos - Lighthouse</option>
+                <option value="Aporte em Investimentos">Aporte em Investimentos</option>
+                <option value="Rendimentos de Investimentos">Rendimentos de Investimentos</option>
                 <option value="Consórcio">Consórcio</option>
                 <option value="Calçados">Calçados</option>
                 <option value="Contador">Contador</option>
@@ -309,7 +718,7 @@
                 <option value="Exames e concursos">Exames e concursos</option>
                 <option value="Faculdade">Faculdade</option>
                 <option value="Férias">Férias</option>
-                <option value="Financiamento Eliza Miranda">Financiamento Eliza Miranda</option>
+                <option value="Financiamento Imobiliario">Financiamento Imobiliário</option>
                 <option value="FGTS">FGTS</option>
                 <option value="FIES">FIES</option>
                 <option value="F1 game">F1 game</option>
@@ -345,8 +754,8 @@
                 <option value="Pensão">Pensão</option>
                 <option value="Pet Shop">Pet Shop</option>
                 <option value="PIX Conta PJ">PIX Conta PJ</option>
-                <option value="PIX Loren">PIX Loren</option>
-                <option value="PIX Pai">PIX Pai</option>
+                <option value="PIX Conjuge">PIX Cônjuge/Parceiro(a)</option>
+                <option value="PIX Familia">PIX Família</option>
                 <option value="Passeios e expedições">Passeios e expedições</option>
                 <option value="Poupança">Poupança</option>
                 <option value="Pós-Graduação">Pós-Graduação</option>
@@ -368,18 +777,20 @@
                 <option value="Spotify">Spotify</option>
                 <option value="Supermercado">Supermercado</option>
                 <option value="Taxas gerais">Taxas gerais</option>
-                <option value="Taxas - Eliza Miranda">Taxas - Eliza Miranda</option>
-                <option value="Taxas - Predilleto">Taxas - Predilleto</option>
-                <option value="Taxas - UWIN">Taxas - UWIN</option>
-                <option value="Taxas - ZIP Morumbi">Taxas - ZIP Morumbi</option>
+                <option value="Taxas do Imovel">Taxas do Imóvel</option>
+                <option value="Taxas do Imovel 2">Taxas do Imóvel 2</option>
+                <option value="Taxas do Imovel 3">Taxas do Imóvel 3</option>
+                <option value="Taxas do Imovel 4">Taxas do Imóvel 4</option>
                 <option value="Tik Tok Ads">Tik Tok Ads</option>
                 <option value="Uber">Uber</option>
                 <option value="Vale-Alimentação">Vale-Alimentação</option>
                 <option value="Vale-Transporte">Vale-Transporte</option>
-                <option value="Vestuário - Levy">Vestuário - Levy</option>
-                <option value="Vestuário - Loren">Vestuário - Loren</option>
+                <option value="Vestuário">Vestuário</option>
+                <option value="Vestuário Conjuge">Vestuário Cônjuge/Parceiro(a)</option>
                 <option value="Veterinário">Veterinário</option>
             </select>
+
+            <p id="avisoCartaAnterior" class="hint-text" style="display:none; border-left: 2px solid var(--beacon); padding-left: 10px;"></p>
 
             <label for="descricao">Descrição</label>
             <input type="text" id="descricao" required>
@@ -394,29 +805,55 @@
                 <option value="Transferência">Transferência</option>
             </select>
 
-            <label for="rsg">RSG (Retorno Sobre Gasto)</label>
-            <select id="rsg" required>
-                <option value="1">1 😡</option>
-                <option value="2">2 😕</option>
-                <option value="3">3 🙂</option>
-                <option value="4">4 😊</option>
-                <option value="5">5 🤩</option>
-            </select>
+            <div id="campoFormaPagamentoGroup" style="display:none; flex-direction:column; gap:12px;">
+                <label for="formaPagamento">Forma de Pagamento</label>
+                <select id="formaPagamento" onchange="toggleParcelasVisibility(); verificarDicaFinanciamento();">
+                    <option value="Dinheiro">Dinheiro</option>
+                    <option value="Débito">Débito</option>
+                    <option value="PIX">PIX</option>
+                </select>
 
-            <label for="tipoGasto">Tipo de Gasto</label>
-            <select id="tipoGasto" required>
-                <option value="Arrependimento">Arrependimento</option>
-                <option value="Planejado">Planejado</option>
-                <option value="Pequeno impulso">Pequeno impulso</option>
-                <option value="Grande impulso">Grande impulso</option>
-                <option value="Setback não-evitável">Setback não-evitável</option>
-                <option value="Setback evitável">Setback evitável</option>
-                <option value="Sonho de vida">Sonho de vida</option>
-            </select>
+                <div id="campoParcelas" style="display:none; flex-direction:column;">
+                    <label for="parcelas">Parcelas</label>
+                    <input type="number" id="parcelas" min="1" max="420" value="1">
+                </div>
 
+                <p id="dicaFinanciamento" class="hint-text" style="display:none;">
+                    💡 É um financiamento novo com parcelas programadas? Cadastre ele em
+                    "Gerenciar meios de pagamento parcelados" (no topo da página) e selecione
+                    ele aqui em Forma de Pagamento — assim as parcelas futuras são geradas
+                    automaticamente.
+                </p>
+            </div>
+
+            <div id="campoRSG" style="display:none; flex-direction:column;">
+                <label for="rsg">RSG (Retorno Sobre Gasto)</label>
+                <select id="rsg">
+                    <option value="1">1 😡</option>
+                    <option value="2">2 😕</option>
+                    <option value="3">3 🙂</option>
+                    <option value="4">4 😊</option>
+                    <option value="5">5 🤩</option>
+                </select>
+            </div>
+
+            <div id="campoTipoGasto" style="display:none; flex-direction:column;">
+                <label for="tipoGasto">Tipo de Gasto</label>
+                <select id="tipoGasto">
+                    <option value="Arrependimento">Arrependimento</option>
+                    <option value="Planejado">Planejado</option>
+                    <option value="Pequeno impulso">Pequeno impulso</option>
+                    <option value="Grande impulso">Grande impulso</option>
+                    <option value="Setback não-evitável">Setback não-evitável</option>
+                    <option value="Setback evitável">Setback evitável</option>
+                    <option value="Sonho de vida">Sonho de vida</option>
+                </select>
+            </div>
+
+            <div id="campoGatilhoSentimento" style="display:none; flex-direction:column; gap:12px;">
             <!-- GATILHO EMOCIONAL -->
             <label for="gatilho">Gatilho Emocional</label>
-            <select id="gatilho" required>
+            <select id="gatilho">
                 <!-- 🔧 Estrutural / Base da vida -->
                 <option value="Manutenção da vida (contas fixas)">Manutenção da vida (contas fixas)</option>
                 <option value="Organização financeira (transferências / investimentos)">Organização financeira
@@ -504,7 +941,7 @@
 
             <!-- NOVO CAMPO: SENTIMENTO PÓS-PAGAMENTO -->
             <label for="sentimentoPos">Sentimento Pós-Pagamento</label>
-            <select id="sentimentoPos" required>
+            <select id="sentimentoPos">
                 <option value="Muito satisfeito">Muito satisfeito</option>
                 <option value="Satisfeito">Satisfeito</option>
                 <option value="Neutro">Neutro</option>
@@ -517,6 +954,7 @@
                 <option value="Preocupado">Preocupado</option>
                 <option value="Incomodado">Incomodado</option>
             </select>
+            </div>
 
             <button type="submit" id="saveBtn">Salvar</button>
         </form>
@@ -535,6 +973,8 @@
                             <th>Descrição</th>
                             <th>Valor</th>
                             <th>Tipo</th>
+                            <th>Pagamento</th>
+                            <th>Parcela</th>
                             <th>RSG</th>
                             <th>Tipo de Gasto</th>
                             <th>Gatilho Emocional</th>
@@ -556,6 +996,8 @@
         });
     </script>
 
+<script src="ios-warning.js"></script>
+<script src="briefing-lembrete.js"></script>
 </body>
 
 </html>

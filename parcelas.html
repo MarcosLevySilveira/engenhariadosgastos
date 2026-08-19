@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lighthouse — Parcelas em Aberto</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0B1622">
+    <link rel="icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+</head>
+
+<body onload="init()">
+
+    <header class="topbar">
+        <a href="index.html" class="wordmark">Lighthouse</a>
+        <button class="nav-toggle" id="navToggle" aria-controls="site-nav" aria-expanded="false">Menu</button>
+    </header>
+
+    <nav id="site-nav" class="site-nav">
+        <div class="nav-group">
+            <p class="nav-group-title">Painéis</p>
+            <a href="index.html">Tabela de Gastos</a>
+            <a href="rsgDash.html">Dashboard RSG</a>
+            <a href="gatilhos.html">Dashboard Inteligente</a>
+            <a href="dre.html">Despesas e Receitas</a>
+<a href="briefing-semanal.html">Briefing Semanal</a>
+<a href="relatorio-mensal.html">Relatório Mensal</a>
+        </div>
+        <div class="nav-group">
+            <p class="nav-group-title">Lançar</p>
+            <a href="cadastro4.html">Cadastrar Despesa/Entrada</a>
+            <a href="parcelas.html" class="active">Parcelas em Aberto</a>
+        </div>
+        <div class="nav-group">
+            <p class="nav-group-title">Relatórios</p>
+            <a href="monthlyExpenses.html">Gastos Mensais</a>
+            <a href="mastermonthly.html">Gastos Macro</a>
+        </div>
+<div class="nav-group">
+<p class="nav-group-title">Configurações</p>
+<a href="backup.html">Backup e Restauração</a>
+</div>
+    </nav>
+
+    <main>
+        <div class="form-header">
+            <h1>Parcelas em Aberto</h1>
+        </div>
+        <p class="hint-text">Compras parceladas (cartão, consórcio, carnê ou financiamento) que ainda têm parcelas futuras não pagas. Quite tudo de uma vez, quite com um valor diferente (ex: desconto por antecipar), quite só algumas parcelas, ou cancele o que sobrou.</p>
+
+        <div id="gruposContainer"></div>
+    </main>
+
+<script>
+    document.getElementById("navToggle").addEventListener("click", function () {
+        const nav = document.getElementById("site-nav");
+        const aberto = nav.classList.toggle("open");
+        this.setAttribute("aria-expanded", aberto);
+    });
+
+    function formatarMoeda(valor) {
+        return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function hojeISO() {
+        const d = new Date();
+        return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    }
+
+    function getDespesas() {
+        return JSON.parse(localStorage.getItem("despesas_demo")) || [];
+    }
+
+    function setDespesas(despesas) {
+        localStorage.setItem("despesas_demo", JSON.stringify(despesas));
+    }
+
+    const TIPO_LABEL = {
+        cartao: "cartão",
+        consorcio: "consórcio",
+        carne: "carnê/crediário",
+        financiamento: "financiamento"
+    };
+
+    function getMeiosParcelados() {
+        return JSON.parse(localStorage.getItem("meiosParcelados_demo")) || [];
+    }
+
+    function nomeCartao(formaPagamento) {
+        if (!formaPagamento || !formaPagamento.startsWith("meio:")) return "-";
+        const id = formaPagamento.replace("meio:", "");
+        const meio = getMeiosParcelados().find(m => m.id === id);
+        return meio ? `${meio.nome} (${TIPO_LABEL[meio.tipo]})` : "Meio de pagamento removido";
+    }
+
+    // Agrupa as parcelas em aberto (data hoje ou futura) por grupoParcelaId
+    function montarGrupos() {
+        const despesas = getDespesas();
+        const hoje = hojeISO();
+
+        const grupos = {};
+        despesas.forEach((d, index) => {
+            if (!d.grupoParcelaId) return;
+            if (d.data < hoje) return; // parcela já vencida/paga no passado, não mexe
+
+            if (!grupos[d.grupoParcelaId]) {
+                grupos[d.grupoParcelaId] = {
+                    id: d.grupoParcelaId,
+                    descricao: d.descricao,
+                    categoria: d.categoria,
+                    formaPagamento: d.formaPagamento,
+                    parcelaTotal: d.parcelaTotal,
+                    itens: []
+                };
+            }
+            grupos[d.grupoParcelaId].itens.push({ ...d, _index: index });
+        });
+
+        return Object.values(grupos).sort((a, b) => a.descricao.localeCompare(b.descricao));
+    }
+
+    function render() {
+        const grupos = montarGrupos();
+        const container = document.getElementById("gruposContainer");
+
+        if (grupos.length === 0) {
+            container.innerHTML = `<div class="insight-card-box"><p class="insight-empty" style="text-align:center;">Nenhuma parcela em aberto no momento.</p></div>`;
+            return;
+        }
+
+        container.innerHTML = grupos.map(g => {
+            const totalRestante = g.itens.reduce((s, i) => s + i.valor, 0);
+            const restantes = g.itens.length;
+
+            const itensHtml = g.itens
+                .sort((a, b) => a.data.localeCompare(b.data))
+                .map(i => `
+                    <div class="parcela-item">
+                        <label>
+                            <input type="checkbox" class="chk-parcela" data-grupo="${g.id}" data-index="${i._index}">
+                            Parcela ${i.parcelaAtual}/${i.parcelaTotal} — ${i.data}
+                        </label>
+                        <span class="valor-mono">R$ ${formatarMoeda(i.valor)}</span>
+                    </div>
+                `).join("");
+
+            return `
+                <div class="parcela-group">
+                    <div class="parcela-group-header">
+                        <h3>${g.descricao}</h3>
+                        <span class="parcela-group-total">R$ ${formatarMoeda(totalRestante)}</span>
+                    </div>
+                    <p class="parcela-group-meta">${g.categoria} · ${nomeCartao(g.formaPagamento)} · ${restantes} de ${g.parcelaTotal} parcela(s) em aberto</p>
+
+                    ${itensHtml}
+
+                    <div class="parcela-actions">
+                        <button class="btn-quitar" onclick="quitarTudo('${g.id}')">Quitar tudo agora</button>
+                        <button class="btn-quitar-valor" onclick="quitarComValorDiferente('${g.id}')">Quitar com valor diferente</button>
+                        <button class="btn-quitar-valor" onclick="quitarSelecionadas('${g.id}')">Quitar selecionadas</button>
+                        <button class="btn-estornar" onclick="estornarGrupo('${g.id}')">Estornar restantes</button>
+                    </div>
+                </div>
+            `;
+        }).join("");
+    }
+
+    function indicesDoGrupo(grupoId) {
+        const despesas = getDespesas();
+        const hoje = hojeISO();
+        const indices = [];
+        despesas.forEach((d, i) => {
+            if (d.grupoParcelaId === grupoId && d.data >= hoje) indices.push(i);
+        });
+        return indices;
+    }
+
+    function consolidar(grupoId, indices, valorConsolidado) {
+        let despesas = getDespesas();
+        const base = despesas[indices[0]];
+
+        const registroConsolidado = {
+            ...base,
+            valor: valorConsolidado,
+            data: hojeISO(),
+            descricao: base.descricao + " (quitação de parcelas)",
+            parcelaAtual: 1,
+            parcelaTotal: 1,
+            grupoParcelaId: null
+        };
+
+        // Remove as parcelas do grupo (do maior índice pro menor, pra não bagunçar os índices)
+        indices.sort((a, b) => b - a).forEach(i => despesas.splice(i, 1));
+        despesas.push(registroConsolidado);
+
+        setDespesas(despesas);
+    }
+
+    function quitarTudo(grupoId) {
+        const indices = indicesDoGrupo(grupoId);
+        const despesas = getDespesas();
+        const total = indices.reduce((s, i) => s + despesas[i].valor, 0);
+
+        if (!confirm(`Quitar as ${indices.length} parcela(s) restantes agora, por R$ ${formatarMoeda(total)}?`)) return;
+
+        consolidar(grupoId, indices, total);
+        alert("Parcelas quitadas!");
+        render();
+    }
+
+    function quitarComValorDiferente(grupoId) {
+        const indices = indicesDoGrupo(grupoId);
+        const despesas = getDespesas();
+        const totalOriginal = indices.reduce((s, i) => s + despesas[i].valor, 0);
+
+        const input = prompt(
+            `Valor original restante: R$ ${formatarMoeda(totalOriginal)}\nDigite o valor real que você vai pagar (ex: com desconto por antecipar):`,
+            totalOriginal.toFixed(2).replace(".", ",")
+        );
+        if (input === null) return;
+
+        const valor = parseFloat(input.replace(",", "."));
+        if (isNaN(valor) || valor < 0) {
+            alert("Valor inválido.");
+            return;
+        }
+
+        consolidar(grupoId, indices, valor);
+        alert("Parcelas quitadas com o valor informado!");
+        render();
+    }
+
+    function quitarSelecionadas(grupoId) {
+        const checkboxes = document.querySelectorAll(`.chk-parcela[data-grupo="${grupoId}"]:checked`);
+        if (checkboxes.length === 0) {
+            alert("Marque pelo menos uma parcela pra quitar.");
+            return;
+        }
+
+        const indices = [...checkboxes].map(c => parseInt(c.dataset.index));
+        const despesas = getDespesas();
+        const total = indices.reduce((s, i) => s + despesas[i].valor, 0);
+
+        if (!confirm(`Quitar ${indices.length} parcela(s) selecionada(s) agora, por R$ ${formatarMoeda(total)}? As demais continuam programadas.`)) return;
+
+        consolidar(grupoId, indices, total);
+        alert("Parcelas selecionadas quitadas!");
+        render();
+    }
+
+    function estornarGrupo(grupoId) {
+        const indices = indicesDoGrupo(grupoId);
+        if (!confirm(`Isso vai APAGAR as ${indices.length} parcela(s) restantes sem criar nenhum lançamento no lugar (uso pra compra cancelada/estornada). Essa ação não pode ser desfeita. Continuar?`)) return;
+
+        let despesas = getDespesas();
+        indices.sort((a, b) => b - a).forEach(i => despesas.splice(i, 1));
+        setDespesas(despesas);
+
+        alert("Parcelas estornadas.");
+        render();
+    }
+
+    function init() {
+        render();
+    }
+
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+            navigator.serviceWorker.register("sw.js")
+                .then((reg) => console.log("Service worker registrado:", reg.scope))
+                .catch((err) => console.warn("Falha ao registrar service worker:", err));
+        });
+    }
+</script>
+
+<script src="ios-warning.js"></script>
+<script src="briefing-lembrete.js"></script>
+</body>
+</html>

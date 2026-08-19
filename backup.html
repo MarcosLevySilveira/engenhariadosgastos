@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lighthouse — Backup e Restauração</title>
+<link rel="stylesheet" href="styles.css">
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B1622">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+</head>
+
+<body onload="init()">
+
+  <header class="topbar">
+    <a href="index.html" class="wordmark">Lighthouse</a>
+    <button class="nav-toggle" id="navToggle" aria-controls="site-nav" aria-expanded="false">Menu</button>
+  </header>
+
+  <nav id="site-nav" class="site-nav">
+    <div class="nav-group">
+        <p class="nav-group-title">Painéis</p>
+        <a href="index.html">Tabela de Gastos</a>
+        <a href="rsgDash.html">Dashboard RSG</a>
+        <a href="gatilhos.html">Dashboard Inteligente</a>
+        <a href="dre.html">Despesas e Receitas</a>
+        <a href="briefing-semanal.html">Briefing Semanal</a>
+        <a href="relatorio-mensal.html">Relatório Mensal</a>
+    </div>
+    <div class="nav-group">
+        <p class="nav-group-title">Lançar</p>
+        <a href="cadastro4.html">Cadastrar Despesa/Entrada</a>
+        <a href="parcelas.html">Parcelas em Aberto</a>
+    </div>
+    <div class="nav-group">
+        <p class="nav-group-title">Relatórios</p>
+        <a href="monthlyExpenses.html">Gastos Mensais</a>
+        <a href="mastermonthly.html">Gastos Macro</a>
+    </div>
+    <div class="nav-group">
+        <p class="nav-group-title">Configurações</p>
+        <a href="backup.html" class="active">Backup e Restauração</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="form-header">
+      <h1>Backup e Restauração</h1>
+    </div>
+    <p class="hint-text">Todos os seus dados vivem só nesse navegador — não existe servidor guardando cópia em outro lugar. Se você trocar de celular, limpar o navegador, ou (no iPhone) ficar muito tempo sem abrir o app, os dados somem sem chance de recuperação. Exportar de vez em quando é a única rede de segurança que existe hoje.</p>
+
+    <div id="resumoDados"></div>
+
+    <section class="ledger-section">
+      <h2>Exportar</h2>
+      <div class="insight-card-box">
+        <p style="margin:0 0 14px;">Baixa um arquivo <code>.json</code> com tudo: lançamentos, cartões/consórcios/financiamentos cadastrados, Cartas ao Eu Futuro, e o nível atual. Guarde esse arquivo em algum lugar seguro (Google Drive, e-mail pra você mesmo, etc.).</p>
+        <button class="btn-primario" onclick="exportarDados()">⬇ Baixar backup (.json)</button>
+      </div>
+    </section>
+
+    <section class="ledger-section">
+      <h2>Restaurar</h2>
+      <div class="insight-card-box">
+        <p style="margin:0 0 14px;">Escolha um arquivo de backup gerado por este app. <strong>Isso substitui todos os dados atuais</strong> pelos dados do arquivo — não é possível desfazer depois.</p>
+        <label for="arquivoImport" class="btn-ghost" style="display:block; text-align:center; cursor:pointer;">📂 Escolher arquivo de backup</label>
+        <input type="file" id="arquivoImport" accept=".json,application/json" style="display:none;" onchange="importarArquivo(event)">
+      </div>
+    </section>
+  </main>
+
+<script>
+    document.getElementById("navToggle").addEventListener("click", function () {
+        const nav = document.getElementById("site-nav");
+        const aberto = nav.classList.toggle("open");
+        this.setAttribute("aria-expanded", aberto);
+    });
+
+    const CHAVES_BACKUP = ["despesas_demo", "meiosParcelados_demo", "cartasEuFuturo_demo", "nivelMaximo_demo", "ultimoBriefingVisto_demo"];
+
+    function hojeISO() {
+        const d = new Date();
+        return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    }
+
+    function contarResumo() {
+        const despesas = JSON.parse(localStorage.getItem("despesas_demo")) || [];
+        const cartas = JSON.parse(localStorage.getItem("cartasEuFuturo_demo")) || [];
+        const meios = JSON.parse(localStorage.getItem("meiosParcelados_demo")) || [];
+        const nivel = localStorage.getItem("nivelMaximo_demo") || "1";
+        return { despesas: despesas.length, cartas: cartas.length, meios: meios.length, nivel };
+    }
+
+    function renderResumo() {
+        const r = contarResumo();
+        document.getElementById("resumoDados").innerHTML = `
+            <div class="insight-grid">
+                <div class="insight-card-box">
+                    <h3>Lançamentos</h3>
+                    <p class="insight-card-value">${r.despesas}</p>
+                </div>
+                <div class="insight-card-box">
+                    <h3>Cartas ao Eu Futuro</h3>
+                    <p class="insight-card-value">${r.cartas}</p>
+                </div>
+                <div class="insight-card-box">
+                    <h3>Meios de pagamento</h3>
+                    <p class="insight-card-value">${r.meios}</p>
+                </div>
+                <div class="insight-card-box">
+                    <h3>Nível atual</h3>
+                    <p class="insight-card-value">${r.nivel}</p>
+                </div>
+            </div>
+        `;
+    }
+
+    function exportarDados() {
+        const dados = {};
+        CHAVES_BACKUP.forEach(chave => {
+            const valor = localStorage.getItem(chave);
+            if (valor !== null) dados[chave] = valor;
+        });
+
+        const backup = {
+            app: "Lighthouse",
+            versaoBackup: 1,
+            geradoEm: new Date().toISOString(),
+            dados
+        };
+
+        const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `lighthouse-backup-${hojeISO()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function importarArquivo(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            let backup;
+            try {
+                backup = JSON.parse(e.target.result);
+            } catch (err) {
+                alert("Esse arquivo não é um JSON válido.");
+                event.target.value = "";
+                return;
+            }
+
+            if (!backup.dados || typeof backup.dados !== "object") {
+                alert("Esse arquivo não parece ser um backup do Lighthouse.");
+                event.target.value = "";
+                return;
+            }
+
+            const chavesNoArquivo = Object.keys(backup.dados).filter(k => CHAVES_BACKUP.includes(k));
+            if (chavesNoArquivo.length === 0) {
+                alert("O arquivo de backup não tem nenhum dado reconhecível.");
+                event.target.value = "";
+                return;
+            }
+
+            const resumoAtual = contarResumo();
+            const dataGeracao = backup.geradoEm ? new Date(backup.geradoEm).toLocaleString("pt-BR") : "data desconhecida";
+
+            const confirmar = confirm(
+                `Isso vai SUBSTITUIR os dados atuais (${resumoAtual.despesas} lançamentos, ${resumoAtual.cartas} cartas) ` +
+                `pelos dados desse arquivo, gerado em ${dataGeracao}.\n\n` +
+                `Essa ação não pode ser desfeita. Continuar?`
+            );
+
+            if (!confirmar) {
+                event.target.value = "";
+                return;
+            }
+
+            chavesNoArquivo.forEach(chave => {
+                localStorage.setItem(chave, backup.dados[chave]);
+            });
+
+            alert("Backup restaurado com sucesso!");
+            window.location.reload();
+        };
+        reader.readAsText(file);
+    }
+
+    function init() {
+        renderResumo();
+    }
+
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+            navigator.serviceWorker.register("sw.js")
+                .then((reg) => console.log("Service worker registrado:", reg.scope))
+                .catch((err) => console.warn("Falha ao registrar service worker:", err));
+        });
+    }
+</script>
+
+<script src="ios-warning.js"></script>
+<script src="briefing-lembrete.js"></script>
+</body>
+</html>
