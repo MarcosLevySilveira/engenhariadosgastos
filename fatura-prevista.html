@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lighthouse — Fatura Prevista</title>
+<link rel="stylesheet" href="styles.css">
+<script src="onboarding-check.js"></script>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B1622">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+</head>
+
+<body onload="init()">
+
+  <header class="topbar">
+    <a href="index.html" class="wordmark">Lighthouse</a>
+    <button class="nav-toggle" id="navToggle" aria-controls="site-nav" aria-expanded="false">Menu</button>
+  </header>
+
+  <nav id="site-nav" class="site-nav">
+    <div class="nav-group">
+        <p class="nav-group-title">Painéis</p>
+        <a href="index.html">Tabela de Gastos</a>
+        <a href="rsgDash.html">Dashboard RSG</a>
+        <a href="gatilhos.html">Dashboard Inteligente</a>
+        <a href="dre.html">Despesas e Receitas</a>
+        <a href="briefing-semanal.html">Briefing Semanal</a>
+        <a href="relatorio-mensal.html">Relatório Mensal</a>
+    </div>
+    <div class="nav-group">
+        <p class="nav-group-title">Lançar</p>
+        <a href="cadastro4.html">Cadastrar Despesa/Entrada</a>
+        <a href="parcelas.html">Parcelas em Aberto</a>
+        <a href="fatura-prevista.html" class="active">Fatura Prevista</a>
+    </div>
+    <div class="nav-group">
+        <p class="nav-group-title">Relatórios</p>
+        <a href="monthlyExpenses.html">Gastos Mensais</a>
+        <a href="mastermonthly.html">Gastos Macro</a>
+    </div>
+    <div class="nav-group">
+        <p class="nav-group-title">Configurações</p>
+        <a href="backup.html">Backup e Restauração</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="form-header">
+      <h1>Fatura Prevista</h1>
+    </div>
+    <p class="hint-text">Projeção das próximas 3 faturas de cada cartão cadastrado, somando tudo que cai em cada ciclo de fechamento — compras à vista e parcelas, juntas.</p>
+
+    <div id="conteudo"></div>
+  </main>
+
+<script>
+    document.getElementById("navToggle").addEventListener("click", function () {
+        const nav = document.getElementById("site-nav");
+        const aberto = nav.classList.toggle("open");
+        this.setAttribute("aria-expanded", aberto);
+    });
+
+    function formatarMoeda(valor) {
+        return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatarDataBR(dataISO) {
+        const [ano, mes, dia] = dataISO.split("-");
+        return `${dia}/${mes}`;
+    }
+
+    function isoDeData(d) {
+        return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    }
+
+    function getDespesas() {
+        return JSON.parse(localStorage.getItem("despesas_demo")) || [];
+    }
+
+    function getMeiosParcelados() {
+        return JSON.parse(localStorage.getItem("meiosParcelados_demo")) || [];
+    }
+
+    // "Trava" o dia no último dia válido do mês (ex: dia 31 num mês de 30
+    // dias vira dia 30), em vez de deixar o JS rolar sozinho pro mês seguinte.
+    function dataClampeada(ano, mesIndex, dia) {
+        const ultimoDiaDoMes = new Date(ano, mesIndex + 1, 0).getDate();
+        return new Date(ano, mesIndex, Math.min(dia, ultimoDiaDoMes));
+    }
+
+    // Gera os próximos N ciclos de fatura (início/fim) a partir de hoje,
+    // baseado no dia de fechamento do cartão.
+    function gerarCiclosFatura(fechamentoDia, quantidade) {
+        const hoje = new Date();
+        let anoBase = hoje.getFullYear();
+        let mesBase = hoje.getMonth(); // 0-indexed
+
+        const fechamentoEsteMes = dataClampeada(anoBase, mesBase, fechamentoDia);
+        if (isoDeData(hoje) > isoDeData(fechamentoEsteMes)) {
+            mesBase += 1;
+            if (mesBase > 11) { mesBase = 0; anoBase += 1; }
+        }
+
+        const ciclos = [];
+        for (let i = 0; i < quantidade; i++) {
+            let mesFim = mesBase + i;
+            let anoFim = anoBase + Math.floor(mesFim / 12);
+            mesFim = ((mesFim % 12) + 12) % 12;
+
+            let mesInicio = mesFim - 1;
+            let anoInicio = anoFim;
+            if (mesInicio < 0) { mesInicio = 11; anoInicio -= 1; }
+
+            const fim = dataClampeada(anoFim, mesFim, fechamentoDia);
+            const inicio = dataClampeada(anoInicio, mesInicio, fechamentoDia);
+            inicio.setDate(inicio.getDate() + 1);
+
+            ciclos.push({ inicio: isoDeData(inicio), fim: isoDeData(fim) });
+        }
+        return ciclos;
+    }
+
+    function calcularVencimento(fimCicloISO, vencimentoDia) {
+        const [ano, mes] = fimCicloISO.split("-").map(Number); // mes é 1-indexed
+        // O vencimento cai no mês seguinte ao fechamento.
+        let mesVenc0 = mes; // (mes-1) 0-indexed + 1 mês = mes
+        let anoVenc = ano;
+        if (mesVenc0 > 11) { mesVenc0 = 0; anoVenc += 1; }
+        return isoDeData(dataClampeada(anoVenc, mesVenc0, vencimentoDia));
+    }
+
+    let contadorCiclo = 0;
+
+    function renderizarCartao(cartao, despesas) {
+        const ciclos = gerarCiclosFatura(cartao.fechamento, 3);
+
+        const ciclosHtml = ciclos.map(ciclo => {
+            const itens = despesas.filter(d =>
+                d.formaPagamento === `meio:${cartao.id}` &&
+                d.data > ciclo.inicio && d.data <= ciclo.fim
+            );
+            const total = itens.reduce((s, d) => s + d.valor, 0);
+            const vencimento = calcularVencimento(ciclo.fim, cartao.vencimento);
+            const idCiclo = `ciclo-${contadorCiclo++}`;
+
+            return `
+                <div class="parcela-item" style="flex-direction:column; align-items:stretch; gap:6px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>Fecha ${formatarDataBR(ciclo.fim)} · Vence ${formatarDataBR(vencimento)}</span>
+                        <span class="valor-mono" style="font-size:1rem; color:var(--beacon);">R$ ${formatarMoeda(total)}</span>
+                    </div>
+                    ${itens.length > 0 ? `
+                        <button class="btn-toggle-itens" style="align-self:flex-start;" onclick="toggleItensCiclo('${idCiclo}', this)">Ver ${itens.length} lançamento(s)</button>
+                        <ul class="dre-itens" id="${idCiclo}">
+                            ${itens.map(d => `
+                                <li>
+                                    <span>${formatarDataBR(d.data)} — ${d.descricao} <span style="color:var(--fog)">(${d.categoria})</span></span>
+                                    <span class="valor-mono">R$ ${formatarMoeda(d.valor)}</span>
+                                </li>
+                            `).join("")}
+                        </ul>
+                    ` : `<span class="insight-card-caption">Nenhum lançamento ainda nesse ciclo</span>`}
+                </div>
+            `;
+        }).join("");
+
+        return `
+            <div class="insight-card-box" style="margin-bottom:16px;">
+                <h3>💳 ${cartao.nome}</h3>
+                ${ciclosHtml}
+            </div>
+        `;
+    }
+
+    function toggleItensCiclo(id, btn) {
+        const ul = document.getElementById(id);
+        const aberto = ul.style.display === "flex";
+        ul.style.display = aberto ? "none" : "flex";
+        const qtd = ul.querySelectorAll("li").length;
+        btn.textContent = aberto ? `Ver ${qtd} lançamento(s)` : "Ocultar lançamentos";
+    }
+
+    function init() {
+        const meios = getMeiosParcelados();
+        const cartoes = meios.filter(m => m.tipo === "cartao");
+        const despesas = getDespesas();
+
+        const conteudo = document.getElementById("conteudo");
+
+        if (cartoes.length === 0) {
+            conteudo.innerHTML = `
+                <div class="insight-card-box">
+                    <p class="insight-empty" style="text-align:center;">
+                        Nenhum cartão de crédito cadastrado ainda. Vá em
+                        <a href="cadastro4.html" style="color:var(--beacon);">Cadastrar Despesa/Entrada</a>
+                        → "Gerenciar meios de pagamento parcelados" pra adicionar um.
+                    </p>
+                </div>
+            `;
+            return;
+        }
+
+        conteudo.innerHTML = cartoes.map(c => renderizarCartao(c, despesas)).join("");
+    }
+
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+            navigator.serviceWorker.register("sw.js")
+                .then((reg) => console.log("Service worker registrado:", reg.scope))
+                .catch((err) => console.warn("Falha ao registrar service worker:", err));
+        });
+    }
+</script>
+
+<script src="ios-warning.js"></script>
+<script src="briefing-lembrete.js"></script>
+</body>
+</html>
