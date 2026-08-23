@@ -226,7 +226,7 @@
             const termo = document.getElementById("categoriaBusca").value.trim().toLowerCase();
             const lista = document.getElementById("listaCategoriasFiltradas");
 
-            const filtradas = MICRO_CATEGORIAS.filter(c => c.label.toLowerCase().includes(termo));
+            const filtradas = todasCategorias().filter(c => c.label.toLowerCase().includes(termo));
 
             if (filtradas.length === 0) {
                 lista.innerHTML = '<div class="item-categoria item-categoria-vazio">Nenhuma categoria encontrada</div>';
@@ -241,7 +241,7 @@
         }
 
         function selecionarCategoria(valor) {
-            const item = MICRO_CATEGORIAS.find(c => c.value === valor);
+            const item = todasCategorias().find(c => c.value === valor);
             document.getElementById("categoriaBusca").value = item ? item.label : valor;
             document.getElementById("categoria").value = valor;
             document.getElementById("listaCategoriasFiltradas").style.display = "none";
@@ -260,7 +260,11 @@
 
         function aplicarMasterAutomatico() {
             const categoria = document.getElementById("categoria").value;
-            const master = MICRO_PARA_MASTER[categoria];
+            let master = MICRO_PARA_MASTER[categoria];
+            if (!master) {
+                const personalizada = getCategoriasPersonalizadas().find(c => c.value === categoria);
+                if (personalizada) master = personalizada.master;
+            }
             if (master) document.getElementById("categoriaMaster").value = master;
         }
 
@@ -334,6 +338,7 @@
             toggleCampo("campoTipoGasto", nivel3Mais);
             toggleCampo("campoRSG", nivel3Mais);
             toggleCampo("campoGatilhoSentimento", nivel4Mais);
+            document.getElementById("campoCategoriasPersonalizadas").style.display = nivel3Mais ? "block" : "none";
 
             if (!nivel3Mais) {
                 document.getElementById("formaPagamento").value = "Dinheiro";
@@ -418,6 +423,73 @@
         function toggleFechamentoVisibility() {
             const tipo = document.getElementById("meioTipo").value;
             document.getElementById("campoFechamento").style.display = tipo === "cartao" ? "flex" : "none";
+        }
+
+        // ---------- Categorias personalizadas (CRUD do usuário, a partir do Nível 3) ----------
+
+        function getCategoriasPersonalizadas() {
+            return JSON.parse(localStorage.getItem("categoriasPersonalizadas_demo")) || [];
+        }
+
+        function saveCategoriasPersonalizadas(categorias) {
+            localStorage.setItem("categoriasPersonalizadas_demo", JSON.stringify(categorias));
+        }
+
+        function addCategoriaPersonalizada(event) {
+            event.preventDefault();
+            const nome = document.getElementById("categoriaPersonalizadaNome").value.trim();
+            const master = document.getElementById("categoriaPersonalizadaMaster").value;
+
+            if (!nome) {
+                alert("Digite um nome pra categoria.");
+                return;
+            }
+
+            const todas = todasCategorias();
+            if (todas.some(c => c.label.toLowerCase() === nome.toLowerCase())) {
+                alert("Já existe uma categoria com esse nome (padrão ou personalizada).");
+                return;
+            }
+
+            const categorias = getCategoriasPersonalizadas();
+            categorias.push({
+                id: "cat_" + Date.now(),
+                value: nome,
+                label: nome,
+                master
+            });
+            saveCategoriasPersonalizadas(categorias);
+
+            document.getElementById("formCategoriaPersonalizada").reset();
+            renderCategoriasPersonalizadasList();
+        }
+
+        function deleteCategoriaPersonalizada(id) {
+            if (!confirm("Remover essa categoria personalizada? Lançamentos já cadastrados com ela não são apagados, só deixam de aparecer na busca daqui pra frente.")) return;
+            const categorias = getCategoriasPersonalizadas().filter(c => c.id !== id);
+            saveCategoriasPersonalizadas(categorias);
+            renderCategoriasPersonalizadasList();
+        }
+
+        function renderCategoriasPersonalizadasList() {
+            const categorias = getCategoriasPersonalizadas();
+            const lista = document.getElementById("listaCategoriasPersonalizadas");
+            if (categorias.length === 0) {
+                lista.innerHTML = '<p class="hint-text">Nenhuma categoria personalizada ainda.</p>';
+                return;
+            }
+            lista.innerHTML = categorias.map(c => `
+                <div class="cartao-row">
+                    <span>${c.label} <span class="insight-card-caption">master: ${c.master}</span></span>
+                    <button type="button" class="btn-small btn-delete" onclick="deleteCategoriaPersonalizada('${c.id}')">Remover</button>
+                </div>
+            `).join("");
+        }
+
+        // Junta as categorias fixas do app com as que a pessoa criou.
+        function todasCategorias() {
+            const personalizadas = getCategoriasPersonalizadas().map(c => ({ value: c.value, label: c.label }));
+            return MICRO_CATEGORIAS.concat(personalizadas);
         }
 
         function popularFormaPagamento() {
@@ -614,7 +686,7 @@
             document.getElementById("horario").value = despesa.horario || "";
             document.getElementById("categoriaMaster").value = despesa.categoriaMaster || "";
             document.getElementById("categoria").value = despesa.categoria;
-            const itemCategoria = MICRO_CATEGORIAS.find(c => c.value === despesa.categoria);
+            const itemCategoria = todasCategorias().find(c => c.value === despesa.categoria);
             document.getElementById("categoriaBusca").value = itemCategoria ? itemCategoria.label : despesa.categoria;
             document.getElementById("descricao").value = despesa.descricao;
             document.getElementById("valor").value = despesa.valor;
@@ -710,6 +782,7 @@
         function initPage() {
             toggleFechamentoVisibility();
             renderCartoesList();
+            renderCategoriasPersonalizadasList();
             popularFormaPagamento();
             loadData();
             verificarDicaFinanciamento();
@@ -795,6 +868,41 @@
                     <button type="submit" class="btn-primary">Adicionar</button>
                 </form>
                 <div id="listaCartoes" style="margin-top:14px; display:flex; flex-direction:column; gap:8px;"></div>
+            </div>
+        </details>
+
+        <details class="filter-panel" id="campoCategoriasPersonalizadas" style="display:none;">
+            <summary>Gerenciar categorias personalizadas</summary>
+            <div class="filter-row">
+                <p class="hint-text" style="margin-top:0;">Não achou sua categoria na busca? Crie a sua. Disponível a partir do Nível 3, porque pede pra você escolher a Categoria Master manualmente.</p>
+                <form id="formCategoriaPersonalizada" onsubmit="addCategoriaPersonalizada(event)" style="display:flex; flex-direction:column; gap:12px;">
+                    <label>Nome da categoria
+                        <input type="text" id="categoriaPersonalizadaNome" placeholder="Ex: Aulas de Jiu-Jitsu" required>
+                    </label>
+                    <label>Categoria Master
+                        <select id="categoriaPersonalizadaMaster" required>
+                            <option value="Moradia">Moradia</option>
+                            <option value="Transporte">Transporte</option>
+                            <option value="Alimentação">Alimentação</option>
+                            <option value="Despesas de Viagem a Trabalho">Despesas de Viagem a Trabalho</option>
+                            <option value="Tráfego Pago">Tráfego Pago</option>
+                            <option value="Cartão de Crédito">Cartão de Crédito</option>
+                            <option value="Conexão e prazer">Conexão e Prazer</option>
+                            <option value="Evento único">Evento único</option>
+                            <option value="Saúde">Saúde</option>
+                            <option value="Salário">Salário</option>
+                            <option value="Educação">Educação</option>
+                            <option value="Lazer">Lazer</option>
+                            <option value="Transferência">Transferência</option>
+                            <option value="Investimentos">Investimentos</option>
+                            <option value="Dívidas e Obrigações">Dívidas e Obrigações</option>
+                            <option value="Pets">Pets</option>
+                            <option value="Pessoal">Pessoal</option>
+                        </select>
+                    </label>
+                    <button type="submit" class="btn-primary">Adicionar categoria</button>
+                </form>
+                <div id="listaCategoriasPersonalizadas" style="margin-top:14px; display:flex; flex-direction:column; gap:8px;"></div>
             </div>
         </details>
 
